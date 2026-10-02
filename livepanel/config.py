@@ -13,7 +13,8 @@ DEFAULT = {
               "lead_min": 30, "grace_min": 15, "base_currency": "USD", "data_dir": "~/.livepanel"},
     "fx": {},
     "market": {"extra_holidays": []},
-    "trading": {"enabled": False, "dry_run": True, "allow_extended_hours": False},
+    "trading": {"enabled": False, "dry_run": True, "allow_extended_hours": False,
+                "exit_command": None, "exit_window_prefix": None},
     "window": {"mode": "app", "width": 460, "height": 720},
 }
 HOME = Path.home() / ".livepanel"

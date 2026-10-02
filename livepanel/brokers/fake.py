@@ -9,7 +9,7 @@ import itertools
 import threading
 from datetime import date
 
-from ..models import AccountSnapshot, AssetClass, CashFlow, Instrument, OrderState, Position, Quote, Side
+from ..models import AccountSnapshot, AssetClass, CashFlow, Fill, Instrument, OrderState, Position, Quote, Side
 from .base import Broker, BrokerError
 
 
@@ -68,12 +68,14 @@ class FakeBroker(Broker):
         self.equity = 50_000.0
         self.sim = _SimOrders(self.quotes)
         self.calls: list[tuple] = []
+        self.und: dict[str, Quote] = {}
+        self.fills: list[Fill] = []
 
     @classmethod
     def demo(cls) -> "FakeBroker":
         b = cls()
-        opt = Instrument("US.INTC261120C120000", "INTC 11/20 120C", AssetClass.OPTION, multiplier=100.0,
-                         underlying="INTC", expiry=date(2026, 11, 20), strike=120.0, right="C")
+        opt = Instrument("US.NVDA261218C150000", "NVDA 12/18 150C", AssetClass.OPTION, multiplier=100.0,
+                         underlying="NVDA", expiry=date(2026, 12, 18), strike=150.0, right="C")
         stk = Instrument("US.AAPL", "AAPL", AssetClass.STOCK)
         shrt = Instrument("US.TSLA", "TSLA", AssetClass.STOCK)
         b.pos = [Position("DEMO-0001", opt, 10, 11.80, 12.50, 12_500, 700, 85, 10),
@@ -81,6 +83,13 @@ class FakeBroker(Broker):
                  Position("DEMO-0001", shrt, -20, 260.0, 251.0, -5_020, 180, 44, 20)]
         b.q = {opt.key: Quote(12.45, 12.65, 0.05, 12.51), stk.key: Quote(228.38, 228.41, 0.01, 228.4),
                shrt.key: Quote(250.95, 251.02, 0.01, 251.0)}
+        b.und = {"NVDA": Quote(180.0, 180.05, 0.01, 180.0, prev_close=182.0)}
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo
+        ny = ZoneInfo("America/New_York")
+        b.fills = [Fill("DEMO-0001", "o1", "NVDA 12/18 150C", "BUY", 6, 11.80, _dt(2026, 10, 1, 10, 5, 0, tzinfo=ny)),
+                   Fill("DEMO-0001", "o1", "NVDA 12/18 150C", "BUY", 4, 11.90, _dt(2026, 10, 1, 10, 5, 1, tzinfo=ny)),
+                   Fill("DEMO-0001", "o2", "AAPL", "SELL", 10, 229.10, _dt(2026, 9, 30, 15, 55, 8, tzinfo=ny))]
         return b
 
     def connect(self) -> None:
@@ -97,6 +106,12 @@ class FakeBroker(Broker):
 
     def cash_flows(self, start, end):
         return None if self.flows is None else [f for f in self.flows if start <= f.day <= end]
+
+    def underlying_quotes(self, symbols):
+        return {s: self.und[s] for s in symbols if s in self.und}
+
+    def recent_fills(self, days=3):
+        return list(self.fills)
 
     def place_limit(self, account_id, inst, side, qty, price, session="rth"):
         self.calls.append(("place", inst.key, side, qty, price, session))
@@ -143,6 +158,12 @@ class DryRun(Broker):
 
     def fx_rates(self):
         return self.inner.fx_rates()
+
+    def underlying_quotes(self, symbols):
+        return self.inner.underlying_quotes(symbols)
+
+    def recent_fills(self, days=3):
+        return self.inner.recent_fills(days)
 
     def place_limit(self, account_id, inst, side, qty, price, session="rth"):
         return self.sim.place(account_id, inst, side, qty, price, session)

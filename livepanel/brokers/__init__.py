@@ -97,6 +97,30 @@ class Composite(Broker):
             out.extend(f)
         return out
 
+    def underlying_quotes(self, symbols):
+        out = {}
+        for b in self.connected():
+            missing = [s for s in symbols if s not in out]
+            if not missing:
+                break
+            try:
+                out.update(b.underlying_quotes(missing))
+            except Exception:
+                continue                                # no stock quotes from this one; try the next
+        return out
+
+    def recent_fills(self, days=3):
+        out, any_known = [], False
+        for b in self.connected():
+            try:
+                f = b.recent_fills(days)
+            except Exception:
+                f = None
+            if f is not None:
+                any_known = True
+                out.extend(f)
+        return out if any_known else None
+
     def fx_rates(self):
         out = {}
         for b in self.connected():

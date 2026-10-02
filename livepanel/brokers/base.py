@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import date
 
-from ..models import AccountSnapshot, CashFlow, Instrument, OrderState, Position, Quote, Side
+from ..models import AccountSnapshot, CashFlow, Fill, Instrument, OrderState, Position, Quote, Side
 
 
 class BrokerError(RuntimeError):
@@ -41,6 +41,14 @@ class Broker(ABC):
 
     def cash_flows(self, start: date, end: date) -> list[CashFlow] | None:
         """Deposits / withdrawals between start and end inclusive. None = this broker can't say."""
+        return None
+
+    def underlying_quotes(self, symbols: list[str]) -> dict[str, Quote]:
+        """{"INTC": Quote} for the stocks under option positions — the 'is the stock up today' column."""
+        return {}
+
+    def recent_fills(self, days: int = 3) -> list[Fill] | None:
+        """Executions of the last few days. None = this broker can't say."""
         return None
 
     def fx_rates(self) -> dict[str, float]:

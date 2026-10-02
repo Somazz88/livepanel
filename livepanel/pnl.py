@@ -57,6 +57,27 @@ class EquityStore:
         return out
 
 
+    def day_points(self, et_day: date, tz, every_min: int = 5) -> list[list]:
+        """Equity through one ET trading day, one point per `every_min`, labelled in the display timezone."""
+        pts: dict[str, float] = {}
+        try:
+            with self.path.open(encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        r = json.loads(line)
+                        t = datetime.fromisoformat(r["ts"])
+                    except (ValueError, KeyError):
+                        continue
+                    if t.astimezone(NY).date() != et_day:
+                        continue
+                    lt = t.astimezone(tz)
+                    slot = lt.replace(minute=lt.minute - lt.minute % every_min, second=0, microsecond=0)
+                    pts[slot.strftime("%H:%M")] = float(r["equity"])      # last value in each slot
+        except OSError:
+            pass
+        return [[k, v] for k, v in pts.items()]
+
+
 def to_base(amount: float, ccy: str, rates: dict[str, float], base: str = "USD") -> float | None:
     """rates = {ccy: units of ccy per 1 base}. Unknown currency -> None (excluded, and the caller says so)."""
     if ccy == base:

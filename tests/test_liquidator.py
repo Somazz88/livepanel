@@ -35,7 +35,7 @@ def key(b, sym):
 
 def test_long_option_walks_down_to_bid_and_fills(setup):
     b, liq = setup
-    job = run(liq, b, [key(b, "INTC 11/20 120C")])
+    job = run(liq, b, [key(b, "NVDA 12/18 150C")])
     prices = [c[4] if c[0] == "place" else c[2] for c in b.calls if c[0] in ("place", "modify")]
     assert prices == [12.55, 12.50, 12.45]                       # 12.45 + 70% x 0.20 = 12.59 -> 12.55, then -0.05
     assert job.legs[0]["state"] == "filled"
@@ -73,9 +73,9 @@ def test_position_gone_places_nothing(setup):
 def test_options_refused_outside_regular_hours(tmp_path):
     b = FakeBroker.demo()
     liq = Liquidator(b, tmp_path, "test", allow_extended=True, step_sec=0.05, now_fn=PRE)
-    job = run(liq, b, [key(b, "INTC 11/20 120C"), key(b, "AAPL")])
+    job = run(liq, b, [key(b, "NVDA 12/18 150C"), key(b, "AAPL")])
     st = {l["name"]: l["state"] for l in job.legs}
-    assert st["INTC 11/20 120C"] == "not_tradable"
+    assert st["NVDA 12/18 150C"] == "not_tradable"
     assert [c[5] for c in b.calls if c[0] == "place"] == ["pre"]    # the stock goes out in the pre-market session
 
 
@@ -93,9 +93,9 @@ def test_recheck_failure_places_nothing(setup):
 
 def test_stop_cancels_working_orders(tmp_path):
     b = FakeBroker.demo()
-    b.q["US.INTC261120C120000"].bid = 10.0                        # bid far below: will never fill
+    b.q["US.NVDA261218C150000"].bid = 10.0                        # bid far below: will never fill
     liq = Liquidator(b, tmp_path, "test", step_sec=0.5, now_fn=RTH)
-    job = liq.start(b.positions(), [key(b, "INTC 11/20 120C")])
+    job = liq.start(b.positions(), [key(b, "NVDA 12/18 150C")])
     time.sleep(0.3)
     liq.stop(job.id)
     job.done.wait(5)
@@ -124,6 +124,6 @@ def test_dry_run_never_reaches_the_real_broker(tmp_path):
     inner.place_limit = inner.modify_price = inner.cancel = forbidden
     b = DryRun(inner)
     liq = Liquidator(b, tmp_path, "dry", step_sec=0.05, now_fn=RTH)
-    job = liq.start(b.positions(), [key(inner, "INTC 11/20 120C")])
+    job = liq.start(b.positions(), [key(inner, "NVDA 12/18 150C")])
     job.done.wait(5)
     assert job.legs[0]["state"] == "filled"

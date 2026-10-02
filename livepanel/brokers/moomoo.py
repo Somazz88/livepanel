@@ -16,7 +16,7 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 
-from ..models import AccountSnapshot, AssetClass, CashFlow, Instrument, OrderState, Position, Quote, Side
+from ..models import AccountSnapshot, AssetClass, CashFlow, Fill, Instrument, OrderState, Position, Quote, Side
 from ..util import scrub
 from .base import Broker, BrokerError
 
@@ -196,8 +196,8 @@ class MoomooBroker(Broker):
                     qty = _f(r.qty) or 0.0
                     if str(getattr(r, "position_side", "LONG")) == "SHORT" and qty > 0:
                         qty = -qty
-                    if qty == 0:
-                        continue
+                    if qty == 0 and not (_f(r.today_pl_val) or 0):
+                        continue        # a leg closed today keeps qty 0 + today_pl_val: its P&L belongs in today's total
                     inst = instrument_from_code(str(r.code), str(r.currency), str(getattr(r, "stock_name", "")))
                     out.append(Position(
                         account_id=key, instrument=inst, qty=qty,
@@ -233,7 +233,46 @@ class MoomooBroker(Broker):
             out[str(r.code)] = Quote(bid=_f(r.bid_price), ask=_f(r.ask_price),
                                      tick=_f(r.price_spread) or 0.01, last=_f(r.last_price),
                                      bid_size=_f(getattr(r, "bid_vol", None)),
-                                     ask_size=_f(getattr(r, "ask_vol", None)))
+                                     ask_size=_f(getattr(r, "ask_vol", None)),
+                                     prev_close=_f(getattr(r, "prev_close_price", None)))
+
+    def underlying_quotes(self, symbols: list[str]) -> dict[str, Quote]:
+        insts = [Instrument(key=f"US.{s}", symbol=s, asset_class=AssetClass.STOCK) for s in symbols]
+        q = self.quotes(insts)
+        return {s: q[f"US.{s}"] for s in symbols if f"US.{s}" in q}
+
+    def recent_fills(self, days: int = 3) -> list[Fill] | None:
+        """history_deal_list_query + today's deal_list_query, de-duplicated by deal id.
+        moomoo stamps US deals in exchange time (ET)."""
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo
+        if self.paper:
+            return []
+        m, ny, out = self.m, ZoneInfo("America/New_York"), []
+        end = date.today() + timedelta(days=1)
+        start = end - timedelta(days=days + 1)
+        with self._lock:
+            for key, (tc, aid, _) in self.acc.items():
+                seen = set()
+                for call in (lambda: tc.history_deal_list_query(start=f"{start} 00:00:00", end=f"{end} 23:59:59",
+                                                                trd_env=self._env(), acc_id=aid),
+                             lambda: tc.deal_list_query(trd_env=self._env(), acc_id=aid)):
+                    ret, df = call()
+                    if ret != m.RET_OK:
+                        return None
+                    for r in df.itertuples():
+                        did = str(r.deal_id)
+                        if did in seen:
+                            continue
+                        seen.add(did)
+                        try:
+                            t = _dt.fromisoformat(str(r.create_time)[:19]).replace(tzinfo=ny)
+                        except ValueError:
+                            continue
+                        inst = instrument_from_code(str(r.code), "USD")
+                        out.append(Fill(key, str(r.order_id), inst.symbol, "BUY" if "BUY" in str(r.trd_side) else "SELL",
+                                        _f(r.qty) or 0.0, _f(r.price) or 0.0, t))
+        return out
 
     # ── cash flows (cached per account per clearing day; past days never change) ──
     def _cache_path(self) -> Path | None:

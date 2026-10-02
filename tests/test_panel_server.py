@@ -84,3 +84,17 @@ def test_after_hours_cold_start_pulls_once_but_records_no_close(tmp_path):
     assert p.store.closes() == {}                                     # an after-hours mark is not a close
     p.tick(now=datetime(2026, 10, 2, 16, 10, tzinfo=NY), force=True)  # inside the grace window
     assert list(p.store.closes()) == ["2026-10-02"]
+
+
+def test_state_has_grouped_view_fills_and_chart(tmp_path):
+    c = cfg(tmp_path)
+    b = brokers.make(c)
+    b.connect()
+    p = Panel(b, c)
+    p._fetch_fills()                                                     # normally a background thread
+    st = p.tick(now=datetime(2026, 10, 1, 15, 0, tzinfo=NY))
+    assert [g["tk"] for g in st["groups"]][:1] == ["NVDA"] and st["groups"][0]["und_chg"] is not None
+    assert st["fills"][0]["qty"] == 10 and st["fills_today"] == 1        # two fills of order o1 merged
+    assert st["acct_today"] == {"DEMO-0001": 99.0}
+    assert st["spark"][-1] == ["2026-10-01", 50000.0]
+    assert st["intraday"] and st["intraday"][-1][1] == 50000.0

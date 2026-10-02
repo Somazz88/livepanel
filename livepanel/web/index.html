@@ -6,8 +6,10 @@
 <meta name="google" content="notranslate">
 <title>Live Panel</title>
 <style>
-:root{--bg:#fafafa;--fg:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--card:#fff;--up:#0a8a3a;--dn:#d70015;--acc:#0a63c9;--warn:#b25000}
-@media (prefers-color-scheme:dark){:root{--bg:#111214;--fg:#ececf0;--mut:#9a9aa2;--line:#2a2b30;--card:#1a1b1f;--up:#34c759;--dn:#ff453a;--acc:#4a9dff;--warn:#ff9f0a}}
+:root{--bg:#fafafa;--fg:#1d1d1f;--mut:#6e6e73;--dim:#9a9aa2;--line:#e5e5ea;--card:#fff;--sub:#f4f4f6;--up:#0a8a3a;--dn:#d70015;
+  --upb:rgba(10,138,58,.13);--dnb:rgba(215,0,21,.12);--acc:#0a63c9;--warn:#b25000}
+@media (prefers-color-scheme:dark){:root{--bg:#111214;--fg:#ececf0;--mut:#9a9aa2;--dim:#6b6b73;--line:#2a2b30;--card:#1a1b1f;--sub:#16171a;
+  --up:#34c759;--dn:#ff453a;--upb:rgba(52,199,89,.18);--dnb:rgba(255,69,58,.18);--acc:#4a9dff;--warn:#ff9f0a}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
@@ -17,31 +19,52 @@ h1{font-size:17px;margin:0;font-weight:600}
 .pill{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
 .pill.live{color:var(--up);border-color:currentColor}.pill.err{color:var(--dn);border-color:currentColor}
 .pill.dry{color:var(--warn);border-color:currentColor}
-.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .card .k{font-size:12px;color:var(--mut)}.card .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.card .n{font-size:11px;color:var(--mut);margin-top:2px}
-.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--mut)}
+.card .n{font-size:11px;color:var(--mut);margin-top:2px;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--mut)}.flat{color:var(--mut)}
+.eq{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:11px;color:var(--dim);line-height:1.15;cursor:zoom-in;font-variant-numeric:tabular-nums}
+.eq svg{flex:1;height:26px}.eq .r{text-align:right}
 .tbl{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{font-size:12px;color:var(--mut);font-weight:500}
 td.l,th.l{text-align:left}tr:last-child td{border-bottom:0}
+tr.grp{cursor:pointer}tr.grp:hover td{background:var(--sub)}
+tr.grp td.l{font-weight:600}
+.car{display:inline-block;width:12px;font-style:normal;color:var(--dim);font-size:9px;transition:transform .15s}
+tr.grp.open .car{transform:rotate(90deg)}
+.chg{font-weight:400;font-size:12px;margin-left:5px}
+tr.sub td{background:var(--sub);font-size:13px;padding:5px 10px}
+tr.sub td.l{padding-left:24px}
+tr.sub b{display:inline-block;min-width:26px;color:var(--mut);font-weight:600;font-size:12px}
+.pc{display:inline-block;min-width:40px}.pc.hot{background:var(--dn);color:#fff;border-radius:4px;padding:0 4px;font-weight:600}
+.ft{color:var(--mut);font-size:12px;margin:6px 2px 0}.ft b{color:var(--fg)}
+.deals{margin-top:10px}
 .bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center}
 button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 button.danger{background:var(--dn);color:#fff;border-color:var(--dn)}button:disabled{opacity:.45;cursor:default}
+#exitCmd{position:fixed;right:14px;bottom:12px;border-radius:99px;padding:6px 16px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .errs{color:var(--dn);font-size:13px;margin:6px 0}
 .job{margin-top:14px}.job h3{font-size:14px;margin:0 0 6px}
 small{color:var(--mut)}
-.acct-in{display:none}
-/* small app window (livepanel --window, ~460px): keep what you glance at — symbol, size, value, today */
-@media (max-width:560px){main{padding:10px}.sum{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.card{padding:8px 10px}.card .v{font-size:17px}th,td{padding:6px 7px}.c-acct,.c-price,.c-pnl{display:none}.acct-in{display:inline}h1{font-size:15px}#refresh{padding:4px 9px}}
+input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
+#ov{position:fixed;inset:0;background:var(--bg);padding:14px 16px;overflow-y:auto;z-index:20}
+#ov .hd{display:flex;justify-content:space-between;align-items:center}
+#ov .tabs span{cursor:pointer;font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 8px;margin-right:6px}
+#ov .tabs span.on{color:var(--fg);background:var(--card)}
+#ovw{position:relative;margin-top:8px}#ovw svg{display:block;width:100%;height:190px}
+#ovtip{position:absolute;pointer-events:none;display:none;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap}
+/* small app window (livepanel --window, ~460px) */
+@media (max-width:560px){main{padding:10px}.sum{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}.card{padding:8px 10px}
+  .card .v{font-size:17px}th,td{padding:5px 6px}tr.sub td{padding:4px 6px}tr.sub td.l{padding-left:16px}h1{font-size:15px}#refresh{padding:4px 9px}}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1 id="title">Live Panel</h1>
+    <h1>Live Panel</h1>
     <span id="status" class="pill">…</span>
     <span id="mode" class="pill" hidden></span>
     <span style="flex:1"></span>
@@ -49,23 +72,36 @@ small{color:var(--mut)}
   </header>
   <div id="errs" class="errs"></div>
   <section class="sum" id="sum"></section>
+  <div class="eq" id="eq" hidden></div>
   <div class="bar" id="tradebar" hidden>
     <button id="exitSel" class="danger" disabled></button>
     <button id="exitAll"></button>
     <small id="tradeNote"></small>
   </div>
   <div class="tbl"><table id="pos"></table></div>
+  <div class="ft" id="foot"></div>
+  <div class="tbl deals" id="dealsBox" hidden><table id="deals"></table></div>
   <section id="jobs"></section>
 </main>
+<button id="exitCmd" class="danger" hidden></button>
+<div id="ov" hidden>
+  <div class="hd"><b id="ovTitle"></b><button id="ovX">✕</button></div>
+  <div class="tabs" style="margin-top:8px"><span data-m="daily" class="on"></span><span data-m="intraday"></span></div>
+  <div id="ovSum" class="ft"></div>
+  <div id="ovw"><svg id="ovSvg"></svg><div id="ovtip"></div></div>
+</div>
 <script>
 const CFG = /*__CFG__*/{};
 const T = {
  en:{refresh:"Refresh",equity:"Equity",today:"Today",week:"This week",month:"This month",live:"live",frozen:"closing marks · ",after:"after-hours pull · ",
    since:"since close",nodeposit:"excludes deposits (broker can't report them)",missing:"legs without broker P&L",
-   notyet:"not enough history yet",loading:"loading deposits…",acct:"Account",inst:"Instrument",qty:"Qty",price:"Price",value:"Value",pnl:"P&L",tday:"Today",
-   exitSel:"Exit selected",exitAll:"Exit all",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",
+   notyet:"not enough history yet",loading:"loading deposits…",now:"now",
+   head:["Symbol · stock today","Value","Today","P&L"],dte:"DTE",cost:"cost",stock:"stock",closedToday:"closed today",
+   footMv:"Positions",expiry:"expiry",deals:"Recent fills",todayN:n=>`today ${n}`,buy:"Buy",sell:"Sell",
+   exitSel:"Exit selected",exitAll:"Exit all",exitCmd:"Exit",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",
    confirm:(n,m)=>`Exit ${n} position(s)?\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread, one tick toward the bid every 10 s, never below the bid.`,
-   note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",bidask:"Bid / Ask",state:"State",filled:"Filled",
+   note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",qty:"Qty",price:"Price",bidask:"Bid / Ask",state:"State",filled:"Filled",inst:"Instrument",
+   chart:"Equity (deposits included)",daily:"Daily",intra:"Today",
    calstale:"Holiday table ended — weekdays all look like trading days; update sessions.py",
    st:{queued:"queued",placed:"placed",stepping:"stepping down",at_passive:"at bid/ask, waiting",filled:"✅ filled",cancelled:"cancelled",
      rejected:"rejected",no_quote:"no quote — not placed",no_quote_hold:"quote gone — holding",no_qty:"nothing closable now — not placed",
@@ -73,10 +109,13 @@ const T = {
      cancel_failed:"cancel failed — check the broker",cancelled_by_user:"cancelled (stop)",recheck_failed:"couldn't re-read positions — not placed"}},
  zh:{refresh:"刷新",equity:"总资产",today:"今日",week:"本周",month:"本月",live:"实时",frozen:"收盘价 · ",after:"盘后拉取 · ",
    since:"自收盘",nodeposit:"未扣出入金(券商不提供)",missing:"条券商没给今日盈亏",
-   notyet:"记录还不够",loading:"正在拉出入金…",acct:"账户",inst:"标的",qty:"数量",price:"现价",value:"市值",pnl:"盈亏",tday:"今日",
-   exitSel:"清选中",exitAll:"全部清仓",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",
+   notyet:"记录还不够",loading:"正在拉出入金…",now:"现在",
+   head:["标的 · 正股今天","市值","今日","持仓"],dte:"DTE",cost:"成本",stock:"正股",closedToday:"今天已平",
+   footMv:"持仓市值",expiry:"到期",deals:"📜 最近买卖",todayN:n=>`今天 ${n} 笔`,buy:"买",sell:"卖",
+   exitSel:"清选中",exitAll:"全部清仓",exitCmd:"清仓",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",
    confirm:(n,m)=>`清掉 ${n} 个持仓？\n\n模式：${m}\n只挂限价单：首挂买价 + 70% 价差，每 10 秒往买价降一格，永不低于买价。`,
-   note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",bidask:"买 / 卖",state:"状态",filled:"成交",
+   note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",qty:"数量",price:"价格",bidask:"买 / 卖",state:"状态",filled:"成交",inst:"标的",
+   chart:"总资产走势(含出入金)",daily:"每日",intra:"今天",
    calstale:"假日表已过期 —— 平日都会被当成交易日，请更新 sessions.py",
    st:{queued:"排队",placed:"已挂",stepping:"降价中",at_passive:"在买/卖价，等成交",filled:"✅ 全部成交",cancelled:"已撤",
      rejected:"被拒",no_quote:"没有报价，没挂",no_quote_hold:"报价消失，这一拍不动",no_qty:"现在没有可平的，没挂",
@@ -87,15 +126,17 @@ const L = T[CFG.lang] || T.en;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = (v,d=2) => v==null||isNaN(v) ? "—" : Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
-const sgn = v => v==null ? "" : (v>0?"up":v<0?"dn":"");
+const sgn = v => v==null ? "" : (v>0.5?"up":v<-0.5?"dn":"flat");
 const pm = (v,d=2) => v==null ? "—" : (v>0?"+":"")+fmt(v,d);
-let sel = new Set(), last = null;
+const k1 = v => (v/1000).toFixed(1)+"k";
+let sel = new Set(), last = null, OPEN = new Set(), ovMode = "daily";
+try { OPEN = new Set(JSON.parse(localStorage.getItem("lp_open") || "[]")); } catch(e) {}
 
 function card(k,v,cls,note){return `<div class="card"><div class="k">${k}</div><div class="v ${cls||""}">${v}</div>${note?`<div class="n">${note}</div>`:""}</div>`}
 
 function render(s){
+  if (s.ui_ver && CFG.ui_ver && s.ui_ver !== CFG.ui_ver) { location.reload(); return; }   // page upgraded on disk
   last = s;
-  $("title").textContent = "Live Panel";
   const st = $("status");
   if (!s.ok && !s.positions){ st.className="pill err"; st.textContent = s.message||"…"; return; }
   st.className = "pill " + (s.frozen ? "" : "live");
@@ -106,22 +147,117 @@ function render(s){
   (s.accounts||[]).filter(a=>!a.ok).forEach(a=>errs.push(`${a.account_id}: ${a.error||"?"}`));
   if (s.calendar_stale) errs.push(L.calstale);
   $("errs").innerHTML = errs.map(e=>`<div>${esc(e)}</div>`).join("");
+
   const p = s.periods||{};
-  const per = (x)=> x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${x.unconverted.join("/")}`:"")] : ["…","",p.loading?L.loading:L.notyet];
+  const per = x => x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${x.unconverted.join("/")}`:"")] : ["…","",p.loading?L.loading:L.notyet];
   const w = per(p.week), mo = per(p.month);
-  $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${s.base||""}</small>`, "", esc((s.accounts||[]).map(a=>`${a.label} ${fmt(a.equity,0)}`).join(" · ")))
-    + card(L.today, pm(s.today), sgn(s.today), s.today_missing?`${s.today_missing} ${L.missing}`:esc((s.other_ccy||[]).map(o=>`${o.symbol} ${pm(o.today)} ${o.ccy}`).join(" · ")))
+  const short = a => String(a).split("-")[0];
+  const accts = (s.accounts||[]).map(a=>`${esc(short(a.account_id))} ${fmt(a.equity,0)}`).join(" · ");
+  const chips = Object.entries(s.acct_today||{}).map(([a,v])=>`${esc(short(a))} <span class="${sgn(v)}">${pm(v,0)}</span>`).join(" · ");
+  const other = (s.other_ccy||[]).map(o=>`${esc(o.symbol)} ${pm(o.today)} ${esc(o.ccy)}`).join(" · ");
+  $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${esc(s.base||"")}</small>`, "", accts)
+    + card(L.today, pm(s.today), sgn(s.today), s.today_missing ? `${s.today_missing} ${L.missing}` : [chips, other].filter(Boolean).join(" · "))
     + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
-  const rows = s.positions||[];
-  const keys = new Set(rows.map(r=>r.key)); sel.forEach(k=>{ if(!keys.has(k)) sel.delete(k) });
-  const head = `<tr>${CFG.trading?'<th class="l"></th>':""}<th class="l c-acct">${L.acct}</th><th class="l">${L.inst}</th><th>${L.qty}</th><th class="c-price">${L.price}</th><th>${L.value}</th><th class="c-pnl">${L.pnl}</th><th>${L.tday}</th></tr>`;
-  $("pos").innerHTML = head + rows.map(r=>`<tr>${CFG.trading?`<td class="l"><input type="checkbox" data-k="${esc(r.key)}" ${sel.has(r.key)?"checked":""}></td>`:""}
-    <td class="l mut c-acct">${esc(r.account)}</td><td class="l"><small class="acct-in">${esc(String(r.account).split("-")[0])} </small>${esc(r.symbol)}${r.ccy!==s.base?` <small>${esc(r.ccy)}</small>`:""}</td>
-    <td>${fmt(r.qty,0)}</td><td class="c-price">${fmt(r.price, r.price!=null&&r.price<10?3:2)}</td><td>${fmt(r.value,0)}</td>
-    <td class="${sgn(r.pnl)} c-pnl">${pm(r.pnl,0)}</td><td class="${sgn(r.today)}">${pm(r.today,0)}</td></tr>`).join("");
-  document.querySelectorAll("#pos input[type=checkbox]").forEach(cb=>cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); syncBtns();});
+  drawSpark(s.spark||[]);
+  drawGroups(s);
+  drawDeals(s);
   syncBtns(); renderJobs(s.jobs||[]);
+  if (!$("ov").hidden) drawOv();
 }
+
+function sparkSvg(d, W, H, stroke){
+  const vs = d.map(x=>x[1]), lo = Math.min(...vs), hi = Math.max(...vs), sp = (hi-lo)||1;
+  const pts = d.map((x,i)=>[i*W/(d.length-1), H-2-(x[1]-lo)/sp*(H-4)]);
+  const line = pts.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ");
+  const col = vs[vs.length-1] >= vs[0] ? "var(--up)" : "var(--dn)";
+  return `<polyline points="0,${H} ${line} ${W},${H}" fill="${col}" fill-opacity=".12" stroke="none"/>`+
+         `<polyline points="${line}" fill="none" stroke="${col}" stroke-width="${stroke}" vector-effect="non-scaling-stroke"/>`;
+}
+function drawSpark(d){
+  const el = $("eq");
+  if (d.length < 2){ el.hidden = true; return; }
+  el.hidden = false;
+  const up = d[d.length-1][1] >= d[0][1];
+  el.innerHTML = `<span>${d[0][0].slice(5)}<br>${k1(d[0][1])}</span><svg viewBox="0 0 200 26" preserveAspectRatio="none">${sparkSvg(d,200,26,1.5)}</svg>`+
+                 `<span class="r">${L.now}<br><b class="${up?"up":"dn"}">${k1(d[d.length-1][1])}</b></span>`;
+}
+
+const EXPAND_ALL = new URLSearchParams(location.search).has("expand");   // ?expand: everything open (screenshots)
+function drawGroups(s){
+  const gs = s.groups||[];
+  if (EXPAND_ALL) { gs.forEach(g=>OPEN.add(g.tk)); OPEN.add("_deals"); }
+  const keys = new Set(gs.flatMap(g=>g.legs.map(l=>l.key))); sel.forEach(k=>{ if(!keys.has(k)) sel.delete(k) });
+  let h = `<tr><th class="l">${L.head[0]}</th><th>${L.head[1]}</th><th>${L.head[2]}</th><th>${L.head[3]}</th></tr>`;
+  for (const g of gs){
+    const open = OPEN.has(g.tk);
+    const chg = g.und_chg==null ? "" : `<span class="chg ${g.und_chg>0.005?"up":g.und_chg<-0.005?"dn":"flat"}">${(g.und_chg>0?"+":"")+g.und_chg.toFixed(1)}%</span>`;
+    const col = g.today >= 0 ? "var(--upb)" : "var(--dnb)";
+    const bar = `background:linear-gradient(to left,${col} ${Math.round(g.bar*100)}%,transparent ${Math.round(g.bar*100)}%)`;
+    const pct = g.pct==null ? "—" : (g.pct>0?"+":"")+Math.round(g.pct)+"%";
+    h += `<tr class="grp${open?" open":""}" data-tk="${esc(g.tk)}"><td class="l"><i class="car">▶</i>${esc(g.tk)}${chg}</td>`+
+         `<td>${g.legs.length ? fmt(g.mv,0) : "—"}</td><td style="${bar}" class="${sgn(g.today)}">${pm(g.today,0)}</td>`+
+         `<td><span class="pc ${g.pct==null?"flat":sgn(g.pl)}${g.hot?" hot":""}">${pct}</span></td></tr>`;
+    if (!open) continue;
+    for (const l of g.legs){
+      const what = l.what === "stock" ? L.stock : esc(l.what);
+      const dte = l.dte==null ? "" : ` · ${L.dte} ${l.dte}`;
+      const px = (l.cost!=null && l.px!=null) ? ` · ${L.cost} ${fmt(l.cost,2)} → <span class="${l.px>l.cost+1e-9?"up":l.px<l.cost-1e-9?"dn":"flat"}">${fmt(l.px,2)}</span>` : "";
+      const cb = CFG.trading ? `<input type="checkbox" data-k="${esc(l.key)}" ${sel.has(l.key)?"checked":""}>` : "";
+      h += `<tr class="sub"><td class="l" colspan="4">${cb}<b>${esc(l.acct)}</b>${what} ×${fmt(Math.abs(l.qty),0)}${l.qty<0?" (short)":""}${dte}${px}</td></tr>`;
+    }
+    for (const c of g.closed)
+      h += `<tr class="sub"><td class="l" colspan="4"><b>${esc(String(c.account).split("-")[0])}</b>${c.what==="stock"?L.stock:esc(c.what)} ${L.closedToday} · <span class="${sgn(c.today)}">${pm(c.today,0)}</span></td></tr>`;
+  }
+  $("pos").innerHTML = h;
+  document.querySelectorAll("#pos tr.grp").forEach(r=>r.onclick=()=>{
+    const t = r.dataset.tk; OPEN.has(t) ? OPEN.delete(t) : OPEN.add(t);
+    try { localStorage.setItem("lp_open", JSON.stringify([...OPEN])); } catch(e) {}
+    render(last);
+  });
+  document.querySelectorAll("#pos input[type=checkbox]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
+    cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); syncBtns();}; });
+  const f = s.foot||{};
+  $("foot").innerHTML = gs.length ? `${L.footMv} <b>$${fmt(f.mv,0)}</b>` + (f.expiry ? ` · ${f.expiry.slice(5).replace("-","/")} ${L.expiry}` : "") : "";
+}
+
+function drawDeals(s){
+  const d = s.fills||[];
+  if (!d.length){ $("dealsBox").hidden = true; return; }
+  $("dealsBox").hidden = false;
+  const open = OPEN.has("_deals");
+  let h = `<tr class="grp${open?" open":""}" data-tk="_deals"><td class="l" colspan="4"><i class="car">▶</i>${L.deals}${s.fills_today?` · ${L.todayN(s.fills_today)}`:""}</td></tr>`;
+  if (open) for (const o of d)
+    h += `<tr class="sub"><td class="l" colspan="4">${esc(o.time)} <b>${esc(o.acct)}</b><span class="${o.side==="BUY"?"up":"dn"}">${o.side==="BUY"?L.buy:L.sell}</span> ${esc(o.symbol)} ×${fmt(o.qty,0)} @${fmt(o.avg,2)}</td></tr>`;
+  $("deals").innerHTML = h;
+  $("deals").querySelector("tr.grp").onclick = () => { OPEN.has("_deals") ? OPEN.delete("_deals") : OPEN.add("_deals");
+    try { localStorage.setItem("lp_open", JSON.stringify([...OPEN])); } catch(e) {} render(last); };
+}
+
+function drawOv(){
+  const d = ovMode === "daily" ? (last.spark||[]) : (last.intraday||[]);
+  const svg = $("ovSvg"), tip = $("ovtip");
+  if (d.length < 2){ svg.innerHTML = ""; $("ovSum").textContent = L.notyet; return; }
+  const W = svg.clientWidth || 400, H = 190, vs = d.map(x=>x[1]), lo = Math.min(...vs), hi = Math.max(...vs), sp = (hi-lo)||1;
+  const X = i => 4 + i*(W-8)/(d.length-1), Y = v => 14 + (hi-v)/sp*(H-28);
+  const up = vs[vs.length-1] >= vs[0], col = up ? "var(--up)" : "var(--dn)";
+  const pts = d.map((x,i)=>X(i).toFixed(1)+","+Y(x[1]).toFixed(1)).join(" ");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `<polyline points="${X(0)},${H-14} ${pts} ${X(d.length-1)},${H-14}" fill="${col}" fill-opacity=".10" stroke="none"/>`+
+    `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6"/>`+
+    `<text x="${W-2}" y="10" text-anchor="end" font-size="10" fill="currentColor" opacity=".55">${fmt(hi,0)}</text>`+
+    `<text x="${W-2}" y="${H-2}" text-anchor="end" font-size="10" fill="currentColor" opacity=".55">${fmt(lo,0)}</text>`+
+    `<text x="2" y="${H-2}" font-size="10" fill="currentColor" opacity=".55">${esc(d[0][0])}</text>`+
+    `<line id="ovx" x1="0" x2="0" y1="14" y2="${H-14}" stroke="currentColor" opacity=".35" stroke-dasharray="2,2" style="display:none"/>`;
+  const a = vs[0], b = vs[vs.length-1];
+  $("ovSum").innerHTML = `${esc(d[0][0])} <b>${fmt(a,0)}</b> → ${L.now} <b>${fmt(b,0)}</b> · <span class="${b>=a?"up":"dn"}">${pm(b-a,0)} (${((b/a-1)*100).toFixed(1)}%)</span>`;
+  svg.onmousemove = ev => { const r = svg.getBoundingClientRect(); let i = Math.round((ev.clientX-r.left-4)/((r.width-8)/(d.length-1)));
+    i = Math.max(0, Math.min(d.length-1, i)); const x = X(i), ln = $("ovx"); ln.setAttribute("x1",x); ln.setAttribute("x2",x); ln.style.display="";
+    const prev = i>0 ? d[i-1][1] : null;
+    tip.innerHTML = `${esc(d[i][0])} · <b>${fmt(d[i][1],0)}</b>` + (prev==null ? "" : ` · <span class="${d[i][1]>=prev?"up":"dn"}">${pm(d[i][1]-prev,0)}</span>`);
+    tip.style.display = "block"; tip.style.left = Math.max(0, Math.min(r.width-tip.offsetWidth, x*r.width/W - tip.offsetWidth/2))+"px"; tip.style.top = "0px"; };
+  svg.onmouseleave = () => { tip.style.display = "none"; const ln = $("ovx"); if (ln) ln.style.display = "none"; };
+}
+
 function syncBtns(){ $("exitSel").disabled = sel.size===0; $("exitSel").textContent = L.exitSel+(sel.size?` (${sel.size})`:""); }
 function renderJobs(jobs){
   $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${j.mode} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
@@ -143,8 +279,15 @@ function exitKeys(keys){
 async function poll(){ try{ const r = await fetch("/api/state",{cache:"no-store"}); render(await r.json()); }catch(e){ $("status").className="pill err"; $("status").textContent="offline"; } }
 $("refresh").textContent = L.refresh; $("refresh").onclick = ()=>post("/api/refresh");
 if (CFG.trading){ $("tradebar").hidden=false; $("exitAll").textContent=L.exitAll; $("tradeNote").textContent=L.note;
-  $("exitSel").onclick=()=>exitKeys([...sel]); $("exitAll").onclick=()=>exitKeys((last&&last.positions||[]).map(r=>r.key)); }
-document.documentElement.lang = CFG.lang==="zh" ? "zh-CN" : "en";
+  $("exitSel").onclick=()=>exitKeys([...sel]);
+  $("exitAll").onclick=()=>exitKeys((last&&last.groups||[]).flatMap(g=>g.legs.filter(l=>l.closable>0).map(l=>l.key))); }
+if (CFG.exit_command){ const b = $("exitCmd"); b.hidden = false; b.textContent = L.exitCmd; b.onclick = ()=>post("/api/exit_command"); }
+$("eq").onclick = () => { $("ov").hidden = false; drawOv(); };
+$("ovX").onclick = () => { $("ov").hidden = true; };
+$("ovTitle").textContent = L.chart;
+document.querySelectorAll("#ov [data-m]").forEach(t => { t.textContent = t.dataset.m==="daily" ? L.daily : L.intra;
+  t.onclick = () => { ovMode = t.dataset.m; document.querySelectorAll("#ov [data-m]").forEach(x=>x.classList.toggle("on", x===t)); drawOv(); }; });
+if (new URLSearchParams(location.search).has("chart")) $("ov").hidden = false;     // ?chart: open the chart (screenshots)
 poll(); setInterval(poll, 3000);
 </script>
 </body>

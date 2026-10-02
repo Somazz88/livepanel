@@ -50,3 +50,17 @@ def test_window_rect_roundtrip(tmp_path):
     assert load_rect(tmp_path) == (-900, -2100, 20, -660)
     (tmp_path / "window.json").write_text("{broken", encoding="utf-8")
     assert load_rect(tmp_path) is None
+
+
+def test_exit_command_starts_the_tool_when_its_window_is_not_open(tmp_path):
+    import sys
+    from livepanel.server import run_exit_command
+    marker = tmp_path / "ran.txt"
+    r = run_exit_command([sys.executable, "-c", f"open(r'{marker}', 'w').write('x')"], window_prefix="no window has this title 7f3a")
+    assert r == {"ok": True, "how": "started"}
+    import time
+    for _ in range(50):
+        if marker.exists():
+            break
+        time.sleep(0.1)
+    assert marker.exists()

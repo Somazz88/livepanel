@@ -18,8 +18,8 @@ class FakeOrder:
 class FakeIB:
     def __init__(self):
         self.placed, self.cancelled = [], []
-        opt = NS(secType="OPT", conId=111, symbol="INTC", lastTradeDateOrContractMonth="20261120", strike=120.0,
-                 right="C", multiplier="100", currency="USD", exchange="", primaryExchange="", localSymbol="INTC  261120C00120000")
+        opt = NS(secType="OPT", conId=111, symbol="NVDA", lastTradeDateOrContractMonth="20261218", strike=150.0,
+                 right="C", multiplier="100", currency="USD", exchange="", primaryExchange="", localSymbol="NVDA  261218C00150000")
         stk = NS(secType="STK", conId=222, symbol="AAPL", lastTradeDateOrContractMonth="", strike=0.0, right="",
                  multiplier="", currency="USD", exchange="", primaryExchange="NASDAQ", localSymbol="AAPL")
         self.items = [NS(contract=opt, position=10.0, marketPrice=12.5, marketValue=12500.0, averageCost=1180.0,
@@ -87,7 +87,7 @@ def test_read_side_mapping():
     snap = b.snapshot()
     assert snap[0].account_id == "IB-4321" and snap[0].equity == 50123.45
     pos = {p.instrument.symbol: p for p in b.positions()}
-    o = pos["INTC 11/20 120C"]
+    o = pos["NVDA 12/18 150C"]
     assert o.instrument.asset_class == AssetClass.OPTION and o.instrument.multiplier == 100
     assert o.avg_price == 11.80                       # averageCost includes the multiplier
     assert o.today_pnl == 85.0

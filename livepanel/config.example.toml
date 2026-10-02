@@ -35,6 +35,8 @@ extra_holidays = []         # e.g. ["2028-01-17"] once the built-in table runs o
 enabled = false             # the exit buttons only exist when true
 dry_run = true              # true = real positions and quotes, simulated fills, nothing is sent
 allow_extended_hours = false  # stocks only; options never trade outside 09:30–16:00 ET
+# exit_command = ["python", "my_exit_tool.py"]   # optional: a red "Exit" button that starts your own tool instead
+# exit_window_prefix = "My Exit"                   # if that tool's window is already open, bring it back instead
 
 [window]                    # `livepanel --window`: its own small window (Chrome / Edge app mode)
 mode = "app"                # "app" or "tab" (a normal browser tab)

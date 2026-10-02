@@ -20,7 +20,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from ..models import AccountSnapshot, AssetClass, Instrument, OrderState, Position, Quote, Side
+from ..models import AccountSnapshot, AssetClass, Fill, Instrument, OrderState, Position, Quote, Side
 from ..util import scrub
 from .base import Broker, BrokerError
 
@@ -207,7 +207,40 @@ class IbkrBroker(Broker):
                 continue
             bid, ask = _num(t.bid), _num(t.ask)
             out[inst.key] = Quote(bid=bid, ask=ask, tick=self._tick_at(inst.key, self._contracts[inst.key], bid or ask),
-                                  last=_num(t.last), bid_size=_num(t.bidSize), ask_size=_num(t.askSize))
+                                  last=_num(t.last), bid_size=_num(t.bidSize), ask_size=_num(t.askSize),
+                                  prev_close=_num(getattr(t, "close", None)))
+        return out
+
+    def underlying_quotes(self, symbols: list[str]) -> dict[str, Quote]:
+        return self._run(self._und_quotes, symbols)
+
+    def _und_quotes(self, symbols):
+        from ib_async import Stock          # only reached with a real gateway; tests inject their own
+        for s in symbols:
+            k = f"und:{s}"
+            if k not in self._tickers:
+                c = Stock(s, "SMART", "USD")
+                self.ib.qualifyContracts(c)
+                self._tickers[k] = self.ib.reqMktData(c, "", False, False)
+        self.ib.sleep(1.0)
+        out = {}
+        for s in symbols:
+            t = self._tickers.get(f"und:{s}")
+            if t is not None:
+                out[s] = Quote(bid=_num(t.bid), ask=_num(t.ask), last=_num(t.last), prev_close=_num(getattr(t, "close", None)))
+        return out
+
+    def recent_fills(self, days: int = 3) -> list[Fill] | None:
+        """The TWS API only hands back this session's executions (older ones live in Flex reports)."""
+        return self._run(self._fills)
+
+    def _fills(self):
+        out = []
+        rev = {v: k for k, v in self.acc.items()}
+        for f in self.ib.fills():
+            ex, c = f.execution, f.contract
+            out.append(Fill(rev.get(ex.acctNumber, "IB"), str(ex.orderId), instrument_from_contract(c).symbol,
+                            "BUY" if ex.side in ("BOT", "BUY") else "SELL", float(ex.shares), float(ex.price), ex.time))
         return out
 
     # cash_flows: the TWS API has no deposit/withdrawal history (that lives in Flex reports) -> base returns None

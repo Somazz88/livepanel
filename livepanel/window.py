@@ -55,6 +55,14 @@ def open_window(url: str, cfg) -> str:
     profile.mkdir(parents=True, exist_ok=True)
     saved = load_rect(cfg.data_dir)
     args = app_window_args(browser, url, profile, int(cfg.get("window", "width")), int(cfg.get("window", "height")))
+    if sys.platform == "win32" and saved and _win().on_a_monitor(saved):
+        # Chrome reads --window-position / --window-size in its own scaled pixels: per monitor, real pixels
+        # divided by that monitor's scale (200% screen at x=-960 is x=-480 to Chrome). Converting here makes
+        # the window open where it belongs instead of flashing on the main screen first.
+        sc = _win().scale_at(saved)
+        args = [a for a in args if not a.startswith("--window-size=")]
+        args += [f"--window-position={round(saved[0] / sc)},{round(saved[1] / sc)}",
+                 f"--window-size={round((saved[2] - saved[0]) / sc)},{round((saved[3] - saved[1]) / sc)}"]
     flags = 0x00000008 if sys.platform == "win32" else 0          # DETACHED_PROCESS: closing the console won't kill it
     subprocess.Popen(args, creationflags=flags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if sys.platform == "win32" and saved:
@@ -146,6 +154,17 @@ class _Win:
     def on_a_monitor(self, rect) -> bool:
         r = self.wt.RECT(*rect)
         return bool(self.u.MonitorFromRect(self.c.byref(r), 0))          # MONITOR_DEFAULTTONULL
+
+    def scale_at(self, rect) -> float:
+        """Display scale (1.0 = 100%) of the monitor holding most of `rect`."""
+        r = self.wt.RECT(*rect)
+        mon = self.u.MonitorFromRect(self.c.byref(r), 2)                  # MONITOR_DEFAULTTONEAREST
+        x, y = self.c.c_uint(), self.c.c_uint()
+        try:
+            self.c.windll.shcore.GetDpiForMonitor(mon, 0, self.c.byref(x), self.c.byref(y))   # MDT_EFFECTIVE_DPI
+            return (x.value or 96) / 96
+        except Exception:
+            return 1.0
 
     def place(self, h, rect) -> None:
         import time

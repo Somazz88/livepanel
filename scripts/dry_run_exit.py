@@ -1,7 +1,7 @@
 """Rehearse the exit engine on your real positions and live quotes without sending a single order.
 
     python scripts/dry_run_exit.py --config config.toml            # every position
-    python scripts/dry_run_exit.py --config config.toml --only INTC  # positions whose symbol contains INTC
+    python scripts/dry_run_exit.py --config config.toml --only NVDA  # positions whose symbol contains NVDA
 
 Run it during market hours. Every broker is wrapped in DryRun: reads go to the broker, orders are
 simulated locally and "fill" when the market crosses them. The script refuses to start otherwise.

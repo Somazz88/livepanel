@@ -13,10 +13,12 @@ from zoneinfo import ZoneInfo
 from .brokers import Composite
 from .models import AssetClass
 from .pnl import EquityStore, period_pnl
-from .sessions import calendar_stale, market_live, trading_day_of
+from .sessions import calendar_stale, market_live, trading_day_of, us_session
+from .view import account_today, group_positions, merge_fills, spark
 from .util import scrub
 
 FLOWS_EVERY_SEC = 600
+FILLS_EVERY_SEC = 300
 
 
 class Panel:
@@ -27,6 +29,7 @@ class Panel:
         self.state: dict = {"ok": False, "message": "starting…"}
         self.positions = []
         self._flows, self._flows_at, self._flows_ready, self._flows_busy = None, 0.0, False, False
+        self._fills, self._fills_at, self._fills_busy = None, 0.0, False
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._force = threading.Event()
@@ -104,6 +107,20 @@ class Panel:
                 else:
                     periods = {"loading": True}
 
+        # ── the grouped view (one row per underlying) ──
+        syms = sorted({(p.instrument.underlying or p.instrument.symbol) for p in positions
+                       if p.instrument.market == "US" and p.instrument.asset_class in (AssetClass.OPTION, AssetClass.STOCK)})
+        try:
+            und = self.b.underlying_quotes(syms) if syms else {}
+        except Exception:
+            und = {}
+        # before the open, brokers still report the day-before's close as prev_close -> the % would be wrong
+        groups, foot = group_positions(positions, und, day, show_und=us_session(now) != "pre", base=base)
+        if time.monotonic() - self._fills_at > FILLS_EVERY_SEC and not self._fills_busy:
+            self._fills_busy = True
+            threading.Thread(target=self._fetch_fills, daemon=True).start()
+        fills, fills_today = merge_fills(self._fills or [], self.tz, day) if self._fills is not None else ([], 0)
+
         rows = [{"key": f"{p.account_id}|{p.instrument.key}", "account": p.account_id, "symbol": p.instrument.symbol,
                  "class": p.instrument.asset_class.value, "market": p.instrument.market, "ccy": p.instrument.currency,
                  "qty": p.qty, "closable": p.closable_qty, "avg": p.avg_price, "price": p.price,
@@ -120,10 +137,27 @@ class Panel:
             "periods": periods, "accounts": [s.__dict__ for s in snaps], "positions": rows,
             "errors": {k: scrub(v) for k, v in self.b.errors.items()},
             "calendar_stale": calendar_stale(day), "message": "",
+            "acct_today": account_today(positions, base), "groups": groups, "foot": foot,
+            "fills": fills, "fills_today": fills_today, "fills_known": self._fills is not None,
+            "spark": spark(closes, round(equity, 2) if all_ok else None, day),
+            "intraday": self.store.day_points(day, self.tz),
         }
         with self._lock:
             self.state = st
         return st
+
+    def _fetch_fills(self):
+        first = self._fills is None
+        try:
+            f = self.b.recent_fills(3)
+            if f is not None or self._fills is None:
+                self._fills = f
+        except Exception:
+            pass
+        finally:
+            self._fills_at, self._fills_busy = time.monotonic(), False
+            if first and self._fills is not None:
+                self.refresh_now()             # after the close the panel is frozen; show the first load anyway
 
     def _fetch_flows(self, first, day):
         try:

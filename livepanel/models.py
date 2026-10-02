@@ -29,7 +29,7 @@ class Side(str, Enum):
 @dataclass(frozen=True)
 class Instrument:
     key: str                         # broker-native id, unique within one broker
-    symbol: str                      # human label: "AAPL", "INTC 11/20 120C", "BTC/USDT perp"
+    symbol: str                      # human label: "AAPL", "NVDA 12/18 150C", "BTC/USDT perp"
     asset_class: AssetClass
     currency: str = "USD"
     market: str = "US"               # "US", "HK", "MY", "CRYPTO", ...
@@ -66,6 +66,7 @@ class Quote:
     bid_size: float | None = None
     ask_size: float | None = None
     ts: datetime | None = None
+    prev_close: float | None = None  # before the open some brokers still report the day-before's close here
 
     @property
     def usable(self) -> bool:
@@ -108,3 +109,15 @@ class BrokerStatus:
     connected: bool
     detail: str = ""
     accounts: list[AccountSnapshot] = field(default_factory=list)
+
+
+@dataclass
+class Fill:
+    """One execution. Several fills of one order are merged for display by (account, order_id)."""
+    account_id: str
+    order_id: str
+    symbol: str
+    side: str                        # "BUY" / "SELL"
+    qty: float
+    price: float
+    time: datetime                   # timezone-aware
