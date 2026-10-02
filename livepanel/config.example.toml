@@ -40,5 +40,5 @@ allow_extended_hours = false  # stocks only; options never trade outside 09:30â€
 
 [window]                    # `livepanel --window`: its own small window (Chrome / Edge app mode)
 mode = "app"                # "app" or "tab" (a normal browser tab)
-width = 460                 # first-open size; after that it reopens where and how big you left it (Windows)
-height = 720
+width = 320                 # first-open size; after that it reopens where and how big you left it (Windows)
+height = 420

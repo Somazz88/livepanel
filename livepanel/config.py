@@ -15,7 +15,7 @@ DEFAULT = {
     "market": {"extra_holidays": []},
     "trading": {"enabled": False, "dry_run": True, "allow_extended_hours": False,
                 "exit_command": None, "exit_window_prefix": None},
-    "window": {"mode": "app", "width": 460, "height": 720},
+    "window": {"mode": "app", "width": 320, "height": 420},
 }
 HOME = Path.home() / ".livepanel"
 EXAMPLE = Path(__file__).parent / "config.example.toml"

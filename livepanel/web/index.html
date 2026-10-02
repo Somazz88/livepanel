@@ -56,6 +56,20 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
 #ov .tabs span.on{color:var(--fg);background:var(--card)}
 #ovw{position:relative;margin-top:8px}#ovw svg{display:block;width:100%;height:190px}
 #ovtip{position:absolute;pointer-events:none;display:none;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap}
+/* dense layout: the small window (<=420 px) — one big number, two small lines, tight rows */
+.dsum{margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.dsum .r1{display:flex;align-items:baseline;gap:6px}.dsum .r1 .k{font-size:11px;color:var(--mut)}
+.dsum .r1 .v{font-size:21px;font-weight:700;letter-spacing:-.3px}.dsum .r1 .c{margin-left:auto;font-size:11px;color:var(--mut)}
+.dsum .r2{display:flex;gap:10px;font-size:11px;color:var(--mut);margin-top:1px;white-space:nowrap}.dsum .r2 b{font-weight:600}
+.dsum .r2 .tot{margin-left:auto}.dsum .r2 .tot b{color:var(--fg)}
+@media (max-width:420px){body{font-size:12px}main{padding:6px 9px}header{gap:6px}h1{font-size:12.5px;color:var(--mut)}
+  .pill{font-size:10.5px;padding:0 6px}#refresh{padding:1px 7px;font-size:11px;border-radius:6px}
+  .eq{margin:2px 0 4px;font-size:9.5px;gap:5px}.eq svg{height:20px}
+  .tbl{border-radius:6px}th{font-size:10px;padding:2px 5px}td{padding:3px 5px}tr.sub td{font-size:11px;padding:2px 5px}
+  tr.sub td.l{padding-left:14px}tr.sub b{min-width:22px;font-size:10px}.chg{font-size:10.5px;margin-left:3px}.car{width:10px;font-size:8px}
+  .pc{min-width:30px}.ft{font-size:10.5px;margin:3px 2px 0}.deals{margin-top:6px}
+  #exitCmd{right:8px;bottom:6px;padding:2px 12px;font-size:12px}.errs{font-size:11px;margin:3px 0}
+  .deals tr.grp td{font-size:11px;color:var(--mut)}}
 /* small app window (livepanel --window, ~460px) */
 @media (max-width:560px){main{padding:10px}.sum{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}.card{padding:8px 10px}
   .card .v{font-size:17px}th,td{padding:5px 6px}tr.sub td{padding:4px 6px}tr.sub td.l{padding-left:16px}h1{font-size:15px}#refresh{padding:4px 9px}}
@@ -130,6 +144,8 @@ const sgn = v => v==null ? "" : (v>0.5?"up":v<-0.5?"dn":"flat");
 const pm = (v,d=2) => v==null ? "—" : (v>0?"+":"")+fmt(v,d);
 const k1 = v => (v/1000).toFixed(1)+"k";
 let sel = new Set(), last = null, OPEN = new Set(), ovMode = "daily";
+const DENSE = matchMedia("(max-width:420px)");
+DENSE.addEventListener("change", () => last && render(last));
 try { OPEN = new Set(JSON.parse(localStorage.getItem("lp_open") || "[]")); } catch(e) {}
 
 function card(k,v,cls,note){return `<div class="card"><div class="k">${k}</div><div class="v ${cls||""}">${v}</div>${note?`<div class="n">${note}</div>`:""}</div>`}
@@ -155,9 +171,22 @@ function render(s){
   const accts = (s.accounts||[]).map(a=>`${esc(short(a.account_id))} ${fmt(a.equity,0)}`).join(" · ");
   const chips = Object.entries(s.acct_today||{}).map(([a,v])=>`${esc(short(a))} <span class="${sgn(v)}">${pm(v,0)}</span>`).join(" · ");
   const other = (s.other_ccy||[]).map(o=>`${esc(o.symbol)} ${pm(o.today)} ${esc(o.ccy)}`).join(" · ");
-  $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${esc(s.base||"")}</small>`, "", accts)
-    + card(L.today, pm(s.today), sgn(s.today), s.today_missing ? `${s.today_missing} ${L.missing}` : [chips, other].filter(Boolean).join(" · "))
-    + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
+  if (DENSE.matches) {
+    const tip = x => x ? ` title="${esc(x[2])}"` : "";
+    const int = x => x ? [pm(x.pnl,0), x.pnl===undefined?"":sgn(x.pnl)] : ["…",""];
+    const wi = p.week ? int(p.week) : [w[0], w[1]], mi = p.month ? int(p.month) : [mo[0], mo[1]];
+    $("sum").className = "dsum";
+    $("sum").innerHTML = `<div class="r1"><span class="k">${L.today}</span><span class="v ${sgn(s.today)}">${pm(s.today,0)}</span>`+
+      `<span class="c">${s.today_missing ? `${s.today_missing} ${L.missing}` : chips}</span></div>`+
+      `<div class="r2"><span${tip(w)}>${L.week} <b class="${wi[1]}">${wi[0]}</b></span><span${tip(mo)}>${L.month} <b class="${mi[1]}">${mi[0]}</b></span>`+
+      `<span class="tot" title="${accts}">${L.equity} <b>${fmt(s.equity,0)}</b></span></div>`+
+      ((accts || other) ? `<div class="r2">${accts}${other ? " · " + other : ""}</div>` : "");
+  } else {
+    $("sum").className = "sum";
+    $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${esc(s.base||"")}</small>`, "", accts)
+      + card(L.today, pm(s.today), sgn(s.today), s.today_missing ? `${s.today_missing} ${L.missing}` : [chips, other].filter(Boolean).join(" · "))
+      + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
+  }
   drawSpark(s.spark||[]);
   drawGroups(s);
   drawDeals(s);
