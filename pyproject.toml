@@ -1,0 +1,17 @@
+[project]
+name = "livepanel"
+version = "0.1.0"
+description = "Local live positions panel for moomoo and Interactive Brokers, with a careful one-click exit"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+moomoo = ["moomoo-api"]
+ibkr = ["ib_async"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["livepanel*"]
+
+[tool.setuptools.package-data]
+livepanel = ["web/*.html"]

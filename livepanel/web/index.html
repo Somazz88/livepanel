@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Panel</title>
+<style>
+:root{--bg:#fafafa;--fg:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--card:#fff;--up:#0a8a3a;--dn:#d70015;--acc:#0a63c9;--warn:#b25000}
+@media (prefers-color-scheme:dark){:root{--bg:#111214;--fg:#ececf0;--mut:#9a9aa2;--line:#2a2b30;--card:#1a1b1f;--up:#34c759;--dn:#ff453a;--acc:#4a9dff;--warn:#ff9f0a}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:17px;margin:0;font-weight:600}
+.pill{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+.pill.live{color:var(--up);border-color:currentColor}.pill.err{color:var(--dn);border-color:currentColor}
+.pill.dry{color:var(--warn);border-color:currentColor}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.card .k{font-size:12px;color:var(--mut)}.card .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.card .n{font-size:11px;color:var(--mut);margin-top:2px}
+.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--mut)}
+.tbl{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:12px;color:var(--mut);font-weight:500}
+td.l,th.l{text-align:left}tr:last-child td{border-bottom:0}
+.bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.danger{background:var(--dn);color:#fff;border-color:var(--dn)}button:disabled{opacity:.45;cursor:default}
+.errs{color:var(--dn);font-size:13px;margin:6px 0}
+.job{margin-top:14px}.job h3{font-size:14px;margin:0 0 6px}
+small{color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">Live Panel</h1>
+    <span id="status" class="pill">…</span>
+    <span id="mode" class="pill" hidden></span>
+    <span style="flex:1"></span>
+    <button id="refresh"></button>
+  </header>
+  <div id="errs" class="errs"></div>
+  <section class="sum" id="sum"></section>
+  <div class="bar" id="tradebar" hidden>
+    <button id="exitSel" class="danger" disabled></button>
+    <button id="exitAll"></button>
+    <small id="tradeNote"></small>
+  </div>
+  <div class="tbl"><table id="pos"></table></div>
+  <section id="jobs"></section>
+</main>
+<script>
+const CFG = /*__CFG__*/{};
+const T = {
+ en:{refresh:"Refresh",equity:"Equity",today:"Today",week:"This week",month:"This month",live:"live",frozen:"closing marks · ",after:"after-hours pull · ",
+   since:"since close",nodeposit:"excludes deposits (broker can't report them)",missing:"legs without broker P&L",
+   notyet:"not enough history yet",loading:"loading deposits…",acct:"Account",inst:"Instrument",qty:"Qty",price:"Price",value:"Value",pnl:"P&L",tday:"Today",
+   exitSel:"Exit selected",exitAll:"Exit all",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",
+   confirm:(n,m)=>`Exit ${n} position(s)?\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread, one tick toward the bid every 10 s, never below the bid.`,
+   note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",bidask:"Bid / Ask",state:"State",filled:"Filled",
+   calstale:"Holiday table ended — weekdays all look like trading days; update sessions.py",
+   st:{queued:"queued",placed:"placed",stepping:"stepping down",at_passive:"at bid/ask, waiting",filled:"✅ filled",cancelled:"cancelled",
+     rejected:"rejected",no_quote:"no quote — not placed",no_quote_hold:"quote gone — holding",no_qty:"nothing closable now — not placed",
+     not_tradable:"market closed for this — not placed",rate_limited:"rate limit — next step",modify_failed:"modify failed — retrying",
+     cancel_failed:"cancel failed — check the broker",cancelled_by_user:"cancelled (stop)",recheck_failed:"couldn't re-read positions — not placed"}},
+ zh:{refresh:"刷新",equity:"总资产",today:"今日",week:"本周",month:"本月",live:"实时",frozen:"收盘价 · ",after:"盘后拉取 · ",
+   since:"自收盘",nodeposit:"未扣出入金(券商不提供)",missing:"条券商没给今日盈亏",
+   notyet:"记录还不够",loading:"正在拉出入金…",acct:"账户",inst:"标的",qty:"数量",price:"现价",value:"市值",pnl:"盈亏",tday:"今日",
+   exitSel:"清选中",exitAll:"全部清仓",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",
+   confirm:(n,m)=>`清掉 ${n} 个持仓？\n\n模式：${m}\n只挂限价单：首挂买价 + 70% 价差，每 10 秒往买价降一格，永不低于买价。`,
+   note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",bidask:"买 / 卖",state:"状态",filled:"成交",
+   calstale:"假日表已过期 —— 平日都会被当成交易日，请更新 sessions.py",
+   st:{queued:"排队",placed:"已挂",stepping:"降价中",at_passive:"在买/卖价，等成交",filled:"✅ 全部成交",cancelled:"已撤",
+     rejected:"被拒",no_quote:"没有报价，没挂",no_quote_hold:"报价消失，这一拍不动",no_qty:"现在没有可平的，没挂",
+     not_tradable:"现在不是它的交易时段，没挂",rate_limited:"限频，下一拍再降",modify_failed:"改价失败，下一拍再试",
+     cancel_failed:"撤单失败 —— 去券商确认",cancelled_by_user:"已撤（按了停止）",recheck_failed:"拉不到最新持仓，没挂"}}
+};
+const L = T[CFG.lang] || T.en;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v,d=2) => v==null||isNaN(v) ? "—" : Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const sgn = v => v==null ? "" : (v>0?"up":v<0?"dn":"");
+const pm = (v,d=2) => v==null ? "—" : (v>0?"+":"")+fmt(v,d);
+let sel = new Set(), last = null;
+
+function card(k,v,cls,note){return `<div class="card"><div class="k">${k}</div><div class="v ${cls||""}">${v}</div>${note?`<div class="n">${note}</div>`:""}</div>`}
+
+function render(s){
+  last = s;
+  $("title").textContent = "Live Panel";
+  const st = $("status");
+  if (!s.ok && !s.positions){ st.className="pill err"; st.textContent = s.message||"…"; return; }
+  st.className = "pill " + (s.frozen ? "" : "live");
+  st.textContent = (s.frozen ? (s.pulled_live ? L.frozen : L.after) : L.live+" · ") + (s.as_of||"");
+  const m = $("mode");
+  if (CFG.trading){ m.hidden=false; m.className = "pill "+(CFG.dry_run?"dry":"err"); m.textContent = CFG.dry_run?L.dry:L.real; }
+  const errs = Object.entries(s.errors||{}).map(([k,v])=>`${k}: ${v}`);
+  (s.accounts||[]).filter(a=>!a.ok).forEach(a=>errs.push(`${a.account_id}: ${a.error||"?"}`));
+  if (s.calendar_stale) errs.push(L.calstale);
+  $("errs").innerHTML = errs.map(e=>`<div>${esc(e)}</div>`).join("");
+  const p = s.periods||{};
+  const per = (x)=> x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${x.unconverted.join("/")}`:"")] : ["…","",p.loading?L.loading:L.notyet];
+  const w = per(p.week), mo = per(p.month);
+  $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${s.base||""}</small>`, "", esc((s.accounts||[]).map(a=>`${a.label} ${fmt(a.equity,0)}`).join(" · ")))
+    + card(L.today, pm(s.today), sgn(s.today), s.today_missing?`${s.today_missing} ${L.missing}`:esc((s.other_ccy||[]).map(o=>`${o.symbol} ${pm(o.today)} ${o.ccy}`).join(" · ")))
+    + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
+  const rows = s.positions||[];
+  const keys = new Set(rows.map(r=>r.key)); sel.forEach(k=>{ if(!keys.has(k)) sel.delete(k) });
+  const head = `<tr>${CFG.trading?'<th class="l"></th>':""}<th class="l">${L.acct}</th><th class="l">${L.inst}</th><th>${L.qty}</th><th>${L.price}</th><th>${L.value}</th><th>${L.pnl}</th><th>${L.tday}</th></tr>`;
+  $("pos").innerHTML = head + rows.map(r=>`<tr>${CFG.trading?`<td class="l"><input type="checkbox" data-k="${esc(r.key)}" ${sel.has(r.key)?"checked":""}></td>`:""}
+    <td class="l mut">${esc(r.account)}</td><td class="l">${esc(r.symbol)}${r.ccy!==s.base?` <small>${esc(r.ccy)}</small>`:""}</td>
+    <td>${fmt(r.qty,0)}</td><td>${fmt(r.price, r.price!=null&&r.price<10?3:2)}</td><td>${fmt(r.value,0)}</td>
+    <td class="${sgn(r.pnl)}">${pm(r.pnl,0)}</td><td class="${sgn(r.today)}">${pm(r.today,0)}</td></tr>`).join("");
+  document.querySelectorAll("#pos input[type=checkbox]").forEach(cb=>cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); syncBtns();});
+  syncBtns(); renderJobs(s.jobs||[]);
+}
+function syncBtns(){ $("exitSel").disabled = sel.size===0; $("exitSel").textContent = L.exitSel+(sel.size?` (${sel.size})`:""); }
+function renderJobs(jobs){
+  $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${j.mode} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
+   ${j.message?`<small>${esc(j.message)}</small>`:""}
+   <div class="tbl"><table><tr><th class="l">${L.inst}</th><th>${L.side}</th><th>${L.qty}</th><th>${L.price}</th><th>${L.bidask}</th><th>${L.filled}</th><th class="l">${L.state}</th></tr>
+   ${j.legs.map(l=>`<tr><td class="l">${esc(l.name)}</td><td>${l.side}</td><td>${fmt(l.qty,0)}</td><td>${fmt(l.price,2)}</td><td>${fmt(l.bid,2)} / ${fmt(l.ask,2)}</td><td>${fmt(l.filled,0)}</td><td class="l">${L.st[l.state]||esc(l.state)}${l.note?` <small>${esc(l.note)}</small>`:""}</td></tr>`).join("")}
+   </table></div></div>`).join("");
+  document.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>post("/api/stop",{job:b.dataset.stop}));
+}
+async function post(path, body){
+  const r = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-Token":CFG.token},body:JSON.stringify(body||{})});
+  const j = await r.json().catch(()=>({})); if(!r.ok) alert(j.error||r.status); poll(); return j;
+}
+function exitKeys(keys){
+  if(!keys.length) return;
+  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real))) return;
+  post("/api/exit",{keys}); sel.clear();
+}
+async function poll(){ try{ const r = await fetch("/api/state",{cache:"no-store"}); render(await r.json()); }catch(e){ $("status").className="pill err"; $("status").textContent="offline"; } }
+$("refresh").textContent = L.refresh; $("refresh").onclick = ()=>post("/api/refresh");
+if (CFG.trading){ $("tradebar").hidden=false; $("exitAll").textContent=L.exitAll; $("tradeNote").textContent=L.note;
+  $("exitSel").onclick=()=>exitKeys([...sel]); $("exitAll").onclick=()=>exitKeys((last&&last.positions||[]).map(r=>r.key)); }
+document.documentElement.lang = CFG.lang==="zh" ? "zh-CN" : "en";
+poll(); setInterval(poll, 3000);
+</script>
+</body>
+</html>

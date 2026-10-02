@@ -1,0 +1,37 @@
+# Copy to config.toml and edit. config.toml is git-ignored.
+
+[brokers]
+use = ["moomoo"]            # any of "moomoo", "ibkr", "demo" — several can share one panel
+
+[moomoo]                    # needs OpenD running and logged in, and: pip install moomoo-api
+host = "127.0.0.1"
+port = 11111
+paper = false               # true = the moomoo simulate account
+include_futures = true      # add a universal account's futures sub-account to its equity
+
+[ibkr]                      # needs TWS / IB Gateway running and logged in, and: pip install ib_async
+host = "127.0.0.1"
+port = 7496                 # TWS 7496 live / 7497 paper · Gateway 4001 live / 4002 paper
+client_id = 17
+market_data_type = 1        # 1 = live (needs a market-data subscription), 3 = delayed
+
+[panel]
+port = 8790
+lang = "en"                 # "en" or "zh"
+display_tz = "America/New_York"
+refresh_sec = 20
+lead_min = 30               # start refreshing this long before the 09:30 ET open
+grace_min = 15              # keep refreshing this long after the close, then freeze on closing marks
+base_currency = "USD"
+data_dir = "~/.livepanel"   # equity history + exit logs live here, never in the repo
+
+[fx]                        # units per 1 USD, for deposits made in another currency
+# MYR = 4.20
+
+[market]
+extra_holidays = []         # e.g. ["2028-01-17"] once the built-in table runs out
+
+[trading]
+enabled = false             # the exit buttons only exist when true
+dry_run = true              # true = real positions and quotes, simulated fills, nothing is sent
+allow_extended_hours = false  # stocks only; options never trade outside 09:30–16:00 ET
