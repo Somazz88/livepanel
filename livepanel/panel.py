@@ -18,7 +18,8 @@ from .view import account_today, group_positions, merge_fills, spark
 from .util import scrub
 
 FLOWS_EVERY_SEC = 600
-FILLS_EVERY_SEC = 300
+FILLS_EVERY_SEC = 300          # outside the session
+FILLS_LIVE_SEC = 60            # during it — and immediately whenever the positions change
 
 
 class Panel:
@@ -30,6 +31,7 @@ class Panel:
         self.positions = []
         self._flows, self._flows_at, self._flows_ready, self._flows_busy = None, 0.0, False, False
         self._fills, self._fills_at, self._fills_busy = None, 0.0, False
+        self._pos_sig = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._force = threading.Event()
@@ -116,7 +118,12 @@ class Panel:
             und = {}
         # before the open, brokers still report the day-before's close as prev_close -> the % would be wrong
         groups, foot = group_positions(positions, und, day, show_und=us_session(now) != "pre", base=base)
-        if time.monotonic() - self._fills_at > FILLS_EVERY_SEC and not self._fills_busy:
+        # 10-02 side-by-side check: a buy at 22:45 was missing from the list 3 minutes later (5-min cadence).
+        # A trade changes the positions, so refetch as soon as they change.
+        sig = tuple(sorted((p.account_id, p.instrument.key, p.qty) for p in positions))
+        changed, self._pos_sig = sig != self._pos_sig, sig
+        every = FILLS_LIVE_SEC if live else FILLS_EVERY_SEC
+        if (changed or time.monotonic() - self._fills_at > every) and not self._fills_busy:
             self._fills_busy = True
             threading.Thread(target=self._fetch_fills, daemon=True).start()
         fills, fills_today = merge_fills(self._fills or [], self.tz, day) if self._fills is not None else ([], 0)

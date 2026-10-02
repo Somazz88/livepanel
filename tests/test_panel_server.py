@@ -98,3 +98,25 @@ def test_state_has_grouped_view_fills_and_chart(tmp_path):
     assert st["acct_today"] == {"DEMO-0001": 99.0}
     assert st["spark"][-1] == ["2026-10-01", 50000.0]
     assert st["intraday"] and st["intraday"][-1][1] == 50000.0
+
+
+def test_a_position_change_refetches_fills_right_away(tmp_path):
+    c = cfg(tmp_path)
+    b = brokers.make(c)
+    b.connect()
+    p = Panel(b, c)
+    calls = []
+    p._fetch_fills = lambda: (calls.append(1), setattr(p, "_fills_busy", False))
+    t = datetime(2026, 10, 2, 10, 0, tzinfo=NY)
+    import time
+    p.tick(now=t)
+    time.sleep(0.2)
+    p._fills_at = time.monotonic()                                    # just fetched
+    p.tick(now=t)
+    time.sleep(0.2)
+    assert len(calls) == 1                                            # nothing changed -> no refetch
+    fake = b.brokers[0].inner if hasattr(b.brokers[0], "inner") else b.brokers[0]
+    fake.pos[1].qty = 30                                              # a trade happened
+    p.tick(now=t)
+    time.sleep(0.2)
+    assert len(calls) == 2
