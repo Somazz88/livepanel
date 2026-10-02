@@ -14,10 +14,11 @@ from .brokers import Composite
 from .models import AssetClass
 from .pnl import EquityStore, period_pnl
 from .sessions import calendar_stale, market_live, trading_day_of, us_session
-from .view import account_today, group_positions, merge_fills, spark
+from .view import account_today, daily_funding, group_positions, merge_fills, spark
 from .util import scrub
 
 FLOWS_EVERY_SEC = 600
+SPARK_DAYS = 60                # trading days shown on the equity chart
 FILLS_EVERY_SEC = 300          # outside the session
 FILLS_LIVE_SEC = 60            # during it — and immediately whenever the positions change
 
@@ -89,6 +90,7 @@ class Panel:
         day = trading_day_of(now)
         closes = self.store.closes(int(self.cfg.get("panel", "grace_min")))
         periods = {}
+        funding = []
         if all_ok:
             marks = []
             for start in (day - timedelta(days=day.weekday()), day.replace(day=1)):
@@ -100,12 +102,15 @@ class Panel:
                 if (stale or not self._flows_ready) and not self._flows_busy:
                     # deposits come one API call per account per day on moomoo (~2 min cold, cached after):
                     # fetch them off the refresh path so positions show up immediately
-                    first = datetime.fromisoformat(min(marks)).date() + timedelta(days=1)
+                    # from the earliest point the chart shows, so its deposit / withdrawal markers are right too
+                    chart_from = sorted(closes)[-SPARK_DAYS:][0] if closes else min(marks)
+                    first = datetime.fromisoformat(min(min(marks), chart_from)).date() + timedelta(days=1)
                     self._flows_busy = True
                     threading.Thread(target=self._fetch_flows, args=(first, day), daemon=True).start()
                 if self._flows_ready:
                     rates = {**{k: float(v) for k, v in (self.cfg.raw.get("fx") or {}).items()}, **self.b.fx_rates()}
                     periods = period_pnl(day, equity, closes, self._flows, rates, base)
+                    funding = daily_funding(self._flows, rates, base)
                 else:
                     periods = {"loading": True}
 
@@ -146,7 +151,8 @@ class Panel:
             "calendar_stale": calendar_stale(day), "message": "",
             "acct_today": account_today(positions, base), "groups": groups, "foot": foot,
             "fills": fills, "fills_today": fills_today, "fills_known": self._fills is not None,
-            "spark": spark(closes, round(equity, 2) if all_ok else None, day),
+            "spark": spark(closes, round(equity, 2) if all_ok else None, day, SPARK_DAYS),
+            "funding": funding,
             "intraday": self.store.day_points(day, self.tz),
         }
         with self._lock:

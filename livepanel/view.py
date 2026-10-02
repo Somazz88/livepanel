@@ -114,6 +114,19 @@ def spark(closes: dict[str, float], equity_now: float | None, day: date, n: int 
     return [[d, round(v, 2)] for d, v in sorted(pts.items())[-n:]]
 
 
+def daily_funding(flows, rates: dict, base: str = "USD") -> list[list]:
+    """[[day, net deposits in base currency], ...] for the chart's ▲ / ▼ markers. Unconvertible currencies are skipped."""
+    from .pnl import to_base
+    by: dict[str, float] = {}
+    for f in flows or []:
+        if f.kind not in ("deposit", "withdrawal"):
+            continue
+        v = to_base(f.amount, f.currency, rates, base)
+        if v is not None:
+            by[f.day.isoformat()] = by.get(f.day.isoformat(), 0.0) + v
+    return [[d, round(v, 2)] for d, v in sorted(by.items()) if abs(v) >= 0.01]
+
+
 def _ny():
     from .sessions import NY
     return NY

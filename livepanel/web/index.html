@@ -55,6 +55,7 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
 #ov .tabs span{cursor:pointer;font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 8px;margin-right:6px}
 #ov .tabs span.on{color:var(--fg);background:var(--card)}
 #ovw{position:relative;margin-top:8px}#ovw svg{display:block;width:100%;height:190px}
+#ovList{margin-top:10px;font-size:12px}#ovList td,#ovList th{padding:3px 6px}
 #ovtip{position:absolute;pointer-events:none;display:none;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:12px;white-space:nowrap}
 /* dense layout: the small window (<=420 px) — one big number, two small lines, tight rows */
 .dsum{margin:6px 0 4px;font-variant-numeric:tabular-nums}
@@ -102,6 +103,7 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
   <div class="tabs" style="margin-top:8px"><span data-m="daily" class="on"></span><span data-m="intraday"></span></div>
   <div id="ovSum" class="ft"></div>
   <div id="ovw"><svg id="ovSvg"></svg><div id="ovtip"></div></div>
+  <table id="ovList"></table>
 </div>
 <script>
 const CFG = /*__CFG__*/{};
@@ -114,7 +116,9 @@ const T = {
    exitSel:"Exit selected",exitAll:"Exit all",exitCmd:"Exit",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",
    confirm:(n,m)=>`Exit ${n} position(s)?\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread, one tick toward the bid every 10 s, never below the bid.`,
    note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",qty:"Qty",price:"Price",bidask:"Bid / Ask",state:"State",filled:"Filled",inst:"Instrument",
-   chart:"Equity (deposits included)",daily:"Daily",intra:"Today",
+   chart:"Equity (deposits included)",daily:"Daily",intra:"Today",sparkHint:"Click for the daily / today chart",
+   colDate:"Date",colTime:"Time (every 30 min)",colEq:"Equity",colChg:"Change",depIn:"deposit",depOut:"withdrawal",
+   legend:"▲ deposit ▼ withdrawal",
    calstale:"Holiday table ended — weekdays all look like trading days; update sessions.py",
    st:{queued:"queued",placed:"placed",stepping:"stepping down",at_passive:"at bid/ask, waiting",filled:"✅ filled",cancelled:"cancelled",
      rejected:"rejected",no_quote:"no quote — not placed",no_quote_hold:"quote gone — holding",no_qty:"nothing closable now — not placed",
@@ -128,7 +132,9 @@ const T = {
    exitSel:"清选中",exitAll:"全部清仓",exitCmd:"清仓",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",
    confirm:(n,m)=>`清掉 ${n} 个持仓？\n\n模式：${m}\n只挂限价单：首挂买价 + 70% 价差，每 10 秒往买价降一格，永不低于买价。`,
    note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",qty:"数量",price:"价格",bidask:"买 / 卖",state:"状态",filled:"成交",inst:"标的",
-   chart:"总资产走势(含出入金)",daily:"每日",intra:"今天",
+   chart:"总资产走势(含出入金)",daily:"每日",intra:"今天",sparkHint:"点一下看每日 / 今天的走势",
+   colDate:"日期",colTime:"时间(每 30 分)",colEq:"总资产",colChg:"变化",depIn:"入金",depOut:"出金",
+   legend:"▲入金 ▼出金",
    calstale:"假日表已过期 —— 平日都会被当成交易日，请更新 sessions.py",
    st:{queued:"排队",placed:"已挂",stepping:"降价中",at_passive:"在买/卖价，等成交",filled:"✅ 全部成交",cancelled:"已撤",
      rejected:"被拒",no_quote:"没有报价，没挂",no_quote_hold:"报价消失，这一拍不动",no_qty:"现在没有可平的，没挂",
@@ -205,6 +211,7 @@ function drawSpark(d){
   const el = $("eq");
   if (d.length < 2){ el.hidden = true; return; }
   el.hidden = false;
+  el.title = L.sparkHint;
   const up = d[d.length-1][1] >= d[0][1];
   el.innerHTML = `<span>${d[0][0].slice(5)}<br>${k1(d[0][1])}</span><svg viewBox="0 0 200 26" preserveAspectRatio="none">${sparkSvg(d,200,26,1.5)}</svg>`+
                  `<span class="r">${L.now}<br><b class="${up?"up":"dn"}">${k1(d[d.length-1][1])}</b></span>`;
@@ -264,7 +271,7 @@ function drawDeals(s){
 function drawOv(){
   const d = ovMode === "daily" ? (last.spark||[]) : (last.intraday||[]);
   const svg = $("ovSvg"), tip = $("ovtip");
-  if (d.length < 2){ svg.innerHTML = ""; $("ovSum").textContent = L.notyet; return; }
+  if (d.length < 2){ svg.innerHTML = ""; $("ovList").innerHTML = ""; $("ovSum").textContent = L.notyet; return; }
   const W = svg.clientWidth || 400, H = 190, vs = d.map(x=>x[1]), lo = Math.min(...vs), hi = Math.max(...vs), sp = (hi-lo)||1;
   const X = i => 4 + i*(W-8)/(d.length-1), Y = v => 14 + (hi-v)/sp*(H-28);
   const up = vs[vs.length-1] >= vs[0], col = up ? "var(--up)" : "var(--dn)";
@@ -276,12 +283,25 @@ function drawOv(){
     `<text x="${W-2}" y="${H-2}" text-anchor="end" font-size="10" fill="currentColor" opacity=".55">${fmt(lo,0)}</text>`+
     `<text x="2" y="${H-2}" font-size="10" fill="currentColor" opacity=".55">${esc(d[0][0])}</text>`+
     `<line id="ovx" x1="0" x2="0" y1="14" y2="${H-14}" stroke="currentColor" opacity=".35" stroke-dasharray="2,2" style="display:none"/>`;
+  // deposits / withdrawals on the day they cleared: the curve includes them, so mark where money moved in or out
+  const fund = {}; if (ovMode === "daily") (last.funding||[]).forEach(f => { fund[f[0]] = (fund[f[0]]||0) + f[1]; });
+  d.forEach((x,i) => { const f = fund[x[0]]; if (!f) return;
+    svg.innerHTML += `<text x="${X(i)}" y="${f>0 ? Y(x[1])-6 : Y(x[1])+13}" text-anchor="middle" font-size="11" fill="${f>0?"var(--acc)":"var(--warn)"}">${f>0?"▲":"▼"}</text>`; });
   const a = vs[0], b = vs[vs.length-1];
-  $("ovSum").innerHTML = `${esc(d[0][0])} <b>${fmt(a,0)}</b> → ${L.now} <b>${fmt(b,0)}</b> · <span class="${b>=a?"up":"dn"}">${pm(b-a,0)} (${((b/a-1)*100).toFixed(1)}%)</span>`;
+  $("ovSum").innerHTML = `${esc(d[0][0])} <b>${fmt(a,0)}</b> → ${L.now} <b>${fmt(b,0)}</b> · <span class="${b>=a?"up":"dn"}">${pm(b-a,0)} (${((b/a-1)*100).toFixed(1)}%)</span>`+
+    (ovMode === "daily" && Object.keys(fund).length ? ` · <small>${L.legend}</small>` : "");
+  // the list: newest first; today's view every 30 minutes
+  const rows = d.map((x,i) => [x[0], x[1], i ? x[1]-d[i-1][1] : null]).reverse().filter((r,i) => ovMode === "daily" || i % 6 === 0);
+  $("ovList").innerHTML = `<tr><th class="l">${ovMode==="daily"?L.colDate:L.colTime}</th><th>${L.colEq}</th><th>${L.colChg}</th></tr>` +
+    rows.map(r => { const f = fund[r[0]];
+      return `<tr><td class="l">${esc(ovMode==="daily"?r[0].slice(5):r[0])}${f?` <small class="${f>0?"":"dn"}">${f>0?"▲"+L.depIn:"▼"+L.depOut} ${fmt(Math.abs(f),0)}</small>`:""}</td>`+
+             `<td>${fmt(r[1],0)}</td><td class="${r[2]==null?"":sgn(r[2])}">${r[2]==null?"":pm(r[2],0)}</td></tr>`; }).join("");
   svg.onmousemove = ev => { const r = svg.getBoundingClientRect(); let i = Math.round((ev.clientX-r.left-4)/((r.width-8)/(d.length-1)));
     i = Math.max(0, Math.min(d.length-1, i)); const x = X(i), ln = $("ovx"); ln.setAttribute("x1",x); ln.setAttribute("x2",x); ln.style.display="";
     const prev = i>0 ? d[i-1][1] : null;
-    tip.innerHTML = `${esc(d[i][0])} · <b>${fmt(d[i][1],0)}</b>` + (prev==null ? "" : ` · <span class="${d[i][1]>=prev?"up":"dn"}">${pm(d[i][1]-prev,0)}</span>`);
+    const fi = fund[d[i][0]];
+    tip.innerHTML = `${esc(d[i][0])} · <b>${fmt(d[i][1],0)}</b>` + (prev==null ? "" : ` · <span class="${d[i][1]>=prev?"up":"dn"}">${pm(d[i][1]-prev,0)}</span>`) +
+      (fi ? ` · ${fi>0?L.depIn:L.depOut} ${fmt(Math.abs(fi),0)}` : "");
     tip.style.display = "block"; tip.style.left = Math.max(0, Math.min(r.width-tip.offsetWidth, x*r.width/W - tip.offsetWidth/2))+"px"; tip.style.top = "0px"; };
   svg.onmouseleave = () => { tip.style.display = "none"; const ln = $("ovx"); if (ln) ln.style.display = "none"; };
 }

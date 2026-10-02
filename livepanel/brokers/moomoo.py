@@ -298,31 +298,38 @@ class MoomooBroker(Broker):
         cache = self._load_cache()
         today = date.today()
         out: list[CashFlow] = []
-        with self._lock:
-            for key, (tc, aid, _) in self.acc.items():
-                d = start
-                while d <= end:
-                    ck = f"{key}|{d.isoformat()}"
-                    rows = cache.get(ck)
-                    if rows is None or d >= today - timedelta(days=1):    # last two days can still change
-                        rows = None
-                        for attempt in range(4):
+        fetched = 0
+        # the lock is taken per API call, not for the whole walk: a cold backfill (one call per account per day,
+        # 20 per 30 s) can take minutes and must not freeze the position / quote refresh meanwhile
+        for key, (tc, aid, _) in list(self.acc.items()):
+            d = start
+            while d <= end:
+                ck = f"{key}|{d.isoformat()}"
+                rows = cache.get(ck)
+                if rows is None or d >= today - timedelta(days=1):    # last two days can still change
+                    rows = None
+                    for attempt in range(4):
+                        with self._lock:
                             ret, df = tc.get_acc_cash_flow(clearing_date=d.isoformat(), trd_env=self._env(), acc_id=aid)
-                            if ret == m.RET_OK:
-                                rows = [[str(r.currency), str(r.cashflow_type), _f(r.cashflow_amount) or 0.0,
-                                         str(r.cashflow_remark or "")] for r in df.itertuples()]
-                                break
-                            if "frequen" in str(df).lower():
-                                time.sleep(5 * (attempt + 1))
-                                continue
+                        if ret == m.RET_OK:
+                            rows = [[str(r.currency), str(r.cashflow_type), _f(r.cashflow_amount) or 0.0,
+                                     str(r.cashflow_remark or "")] for r in df.itertuples()]
                             break
-                        if rows is None:
-                            return None          # can't vouch for the period -> caller labels it
-                        cache[ck] = rows
-                        time.sleep(1.6)          # 20 calls / 30 s
-                    for ccy, typ, amt, rm in rows:
-                        out.append(CashFlow(key, d, amt, ccy, classify_flow(typ, rm), rm[:60]))
-                    d += timedelta(days=1)
+                        if "frequen" in str(df).lower():
+                            time.sleep(5 * (attempt + 1))
+                            continue
+                        break
+                    if rows is None:
+                        self._save_cache(cache)
+                        return None          # can't vouch for the period -> caller labels it
+                    cache[ck] = rows
+                    fetched += 1
+                    if fetched % 20 == 0:
+                        self._save_cache(cache)                    # a long backfill survives a restart
+                    time.sleep(1.6)          # 20 calls / 30 s
+                for ccy, typ, amt, rm in rows:
+                    out.append(CashFlow(key, d, amt, ccy, classify_flow(typ, rm), rm[:60]))
+                d += timedelta(days=1)
         self._save_cache(cache)
         return out
 
