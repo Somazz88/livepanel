@@ -144,20 +144,21 @@ class Job(threading.Thread):
             states = self._states(live)
             for leg in live:
                 s = states.get(leg["oid"])
+                side, q = Side(leg["side"]), qs.get(leg["inst"].key)
+                if q is not None and q.usable:
+                    self.set(leg, bid=q.bid, ask=q.ask)        # before the fill check, so a fill row shows the quote it filled against
                 if s and (s.status, s.filled) != (leg.get("status"), leg.get("filled")):
                     self.set(leg, status=s.status, filled=s.filled, avg=s.avg_price)
                     self.log({"ev": "status", "key": leg["key"], "status": s.raw_status, "filled": s.filled,
-                              "avg": s.avg_price})
+                              "avg": s.avg_price, "bid": leg.get("bid"), "ask": leg.get("ask")})
                 if leg.get("status") in TERMINAL:
                     self.set(leg, state=leg["status"])
                     continue
                 if s and s.raw_status in PENDING_RAW:
                     continue
-                side, q = Side(leg["side"]), qs.get(leg["inst"].key)
                 if q is None or not q.usable:
                     self.set(leg, state="no_quote_hold")
                     continue
-                self.set(leg, bid=q.bid, ask=q.ask)
                 px = next_price(side, leg["price"], q.bid, q.ask, q.tick or 0.01)
                 if abs(px - leg["price"]) < 1e-9:
                     self.set(leg, state="at_passive")
