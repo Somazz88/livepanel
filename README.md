@@ -36,16 +36,31 @@ Accounts are discovered automatically. A universal account's futures sub-account
 
 The TWS API has no deposit history, so IBKR week/month P&L is labelled *excludes deposits*.
 
-## Run
+## Install and run
+
+You need Python 3.11 or newer ([python.org](https://www.python.org/downloads/); on Windows tick
+*Add python.exe to PATH*). Then, in a terminal (PowerShell on Windows):
 
 ```
-cp config.example.toml config.toml     # then edit
-python -m livepanel                     # opens http://127.0.0.1:8790/
-python -m livepanel --demo              # fake positions, nothing to install
+pip install "livepanel[moomoo] @ https://github.com/Somazz88/livepanel/archive/refs/heads/main.zip"
+livepanel --init           # creates ~/.livepanel/config.toml — open it and set your broker
+livepanel --window         # starts the panel in its own small window
 ```
 
-Week / month numbers need history: the app records equity every refresh into `data_dir` and shows a period
-once it has a close from before that period.
+Use `[ibkr]` instead of `[moomoo]` for Interactive Brokers, or `[moomoo,ibkr]` for both.
+Want to look first? `livepanel --demo --window` shows fake positions with nothing to log into.
+
+**Desktop icon (Windows):** `livepanel --make-shortcut` puts a *Live Panel* icon on the desktop.
+Double-click it after your broker gateway is logged in. Clicking it again while it runs just brings the window back.
+Move and resize the window once; it reopens there next time.
+
+The window is Chrome or Edge in app mode (no tabs, no address bar). Wide windows show every column;
+narrow ones keep symbol, size, value and today's P&L. Without Chrome / Edge it opens as a normal browser tab.
+
+From a source checkout instead: `python -m livepanel --window` in the repo folder.
+
+Week / month numbers need history: the app records equity while the market is open and shows a period once
+it has a close from before that period.
 
 ## Exit button — safety
 

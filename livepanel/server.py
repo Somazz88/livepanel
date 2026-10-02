@@ -43,6 +43,8 @@ def serve(panel, liquidator, cfg, port: int):
             if self.path in ("/", "/index.html"):
                 html = (WEB / "index.html").read_text(encoding="utf-8")
                 html = html.replace("/*__CFG__*/{}", json.dumps(page_cfg))
+                # declare the real language up front, or Chrome offers to "translate from Chinese" over the numbers
+                html = html.replace('<html lang="en">', f'<html lang="{"zh-CN" if page_cfg["lang"] == "zh" else "en"}">', 1)
                 return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
             if self.path == "/api/state":
                 return self._json(200, {**panel.view(), "jobs": liquidator.view() if liquidator else [],

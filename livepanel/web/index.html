@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
 <title>Live Panel</title>
 <style>
 :root{--bg:#fafafa;--fg:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--card:#fff;--up:#0a8a3a;--dn:#d70015;--acc:#0a63c9;--warn:#b25000}
@@ -32,6 +33,9 @@ button.danger{background:var(--dn);color:#fff;border-color:var(--dn)}button:disa
 .errs{color:var(--dn);font-size:13px;margin:6px 0}
 .job{margin-top:14px}.job h3{font-size:14px;margin:0 0 6px}
 small{color:var(--mut)}
+.acct-in{display:none}
+/* small app window (livepanel --window, ~460px): keep what you glance at — symbol, size, value, today */
+@media (max-width:560px){main{padding:10px}.sum{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.card{padding:8px 10px}.card .v{font-size:17px}th,td{padding:6px 7px}.c-acct,.c-price,.c-pnl{display:none}.acct-in{display:inline}h1{font-size:15px}#refresh{padding:4px 9px}}
 </style>
 </head>
 <body>
@@ -110,11 +114,11 @@ function render(s){
     + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
   const rows = s.positions||[];
   const keys = new Set(rows.map(r=>r.key)); sel.forEach(k=>{ if(!keys.has(k)) sel.delete(k) });
-  const head = `<tr>${CFG.trading?'<th class="l"></th>':""}<th class="l">${L.acct}</th><th class="l">${L.inst}</th><th>${L.qty}</th><th>${L.price}</th><th>${L.value}</th><th>${L.pnl}</th><th>${L.tday}</th></tr>`;
+  const head = `<tr>${CFG.trading?'<th class="l"></th>':""}<th class="l c-acct">${L.acct}</th><th class="l">${L.inst}</th><th>${L.qty}</th><th class="c-price">${L.price}</th><th>${L.value}</th><th class="c-pnl">${L.pnl}</th><th>${L.tday}</th></tr>`;
   $("pos").innerHTML = head + rows.map(r=>`<tr>${CFG.trading?`<td class="l"><input type="checkbox" data-k="${esc(r.key)}" ${sel.has(r.key)?"checked":""}></td>`:""}
-    <td class="l mut">${esc(r.account)}</td><td class="l">${esc(r.symbol)}${r.ccy!==s.base?` <small>${esc(r.ccy)}</small>`:""}</td>
-    <td>${fmt(r.qty,0)}</td><td>${fmt(r.price, r.price!=null&&r.price<10?3:2)}</td><td>${fmt(r.value,0)}</td>
-    <td class="${sgn(r.pnl)}">${pm(r.pnl,0)}</td><td class="${sgn(r.today)}">${pm(r.today,0)}</td></tr>`).join("");
+    <td class="l mut c-acct">${esc(r.account)}</td><td class="l"><small class="acct-in">${esc(String(r.account).split("-")[0])} </small>${esc(r.symbol)}${r.ccy!==s.base?` <small>${esc(r.ccy)}</small>`:""}</td>
+    <td>${fmt(r.qty,0)}</td><td class="c-price">${fmt(r.price, r.price!=null&&r.price<10?3:2)}</td><td>${fmt(r.value,0)}</td>
+    <td class="${sgn(r.pnl)} c-pnl">${pm(r.pnl,0)}</td><td class="${sgn(r.today)}">${pm(r.today,0)}</td></tr>`).join("");
   document.querySelectorAll("#pos input[type=checkbox]").forEach(cb=>cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); syncBtns();});
   syncBtns(); renderJobs(s.jobs||[]);
 }

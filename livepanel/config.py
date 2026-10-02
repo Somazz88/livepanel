@@ -14,7 +14,28 @@ DEFAULT = {
     "fx": {},
     "market": {"extra_holidays": []},
     "trading": {"enabled": False, "dry_run": True, "allow_extended_hours": False},
+    "window": {"mode": "app", "width": 460, "height": 720},
 }
+HOME = Path.home() / ".livepanel"
+EXAMPLE = Path(__file__).parent / "config.example.toml"
+
+
+def resolve(path: str | None) -> Path:
+    """--config if given; else ./config.toml if it exists; else ~/.livepanel/config.toml."""
+    if path:
+        return Path(path)
+    local = Path("config.toml")
+    return local if local.exists() else HOME / "config.toml"
+
+
+def init(target: Path | None = None) -> tuple[Path, bool]:
+    """Write the example config to ~/.livepanel/config.toml (never overwrites). Returns (path, created)."""
+    t = Path(target or HOME / "config.toml")
+    if t.exists():
+        return t, False
+    t.parent.mkdir(parents=True, exist_ok=True)
+    t.write_text(EXAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    return t, True
 
 
 @dataclass
@@ -47,6 +68,6 @@ def load(path: str | Path | None) -> Config:
         return Config({})
     p = Path(path)
     if not p.exists():
-        raise FileNotFoundError(f"{p} not found — copy config.example.toml to {p.name} and edit it")
+        raise FileNotFoundError(f"{p} not found — run `livepanel --init` to create it, then edit it")
     with p.open("rb") as f:
         return Config(tomllib.load(f))

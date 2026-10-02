@@ -1,7 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "livepanel"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local live positions panel for moomoo and Interactive Brokers, with a careful one-click exit"
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = []
 
@@ -10,8 +16,14 @@ moomoo = ["moomoo-api"]
 ibkr = ["ib_async"]
 dev = ["pytest"]
 
+[project.scripts]
+livepanel = "livepanel.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/Somazz88/livepanel"
+
 [tool.setuptools.packages.find]
 include = ["livepanel*"]
 
 [tool.setuptools.package-data]
-livepanel = ["web/*.html"]
+livepanel = ["web/*.html", "config.example.toml"]
