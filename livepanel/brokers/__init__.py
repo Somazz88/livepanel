@@ -1,6 +1,7 @@
 """Build the broker(s) named in config. Several brokers can feed one panel; Composite routes calls."""
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from ..models import Instrument
@@ -45,6 +46,21 @@ class Composite(Broker):
 
     def connected(self) -> list[Broker]:
         return [b for b in self.brokers if b.name not in self.errors]
+
+    def logins(self) -> list[dict]:
+        """One row per broker connection, for the unlock dialog."""
+        out = []
+        for b in self.brokers:
+            inner = getattr(b, "inner", b)
+            out.append({"name": b.name, "label": getattr(inner, "label", None) or inner.name,
+                        "unlock": bool(getattr(inner, "needs_unlock", False)), "connected": b.name not in self.errors})
+        return out
+
+    def unlock(self, name: str, password: str) -> None:
+        for b in self.brokers:
+            if b.name == name:
+                return b.unlock(password)
+        raise BrokerError(f"unknown login {name}")
 
     def broker_for_account(self, acc: str) -> Broker:
         if acc not in self._acc:
@@ -140,15 +156,57 @@ class Composite(Broker):
         return self.broker_for_account(account_id).order_states(account_id, order_ids)
 
 
+_BAD_LABEL = re.compile(r"[-|·\s]")
+
+
+def moomoo_logins(cfg) -> list[dict]:
+    """One OpenD serves one moomoo login. For several logins, list them as [[moomoo.logins]] tables, each with
+    a label and its own OpenD api_port; fields a login leaves out come from [moomoo]. No list = one login, no label.
+    since = "YYYY-MM-DD" marks a login added after the panel already had history: its balance the first time the
+    panel sees it is booked as a deposit, so this week / this month don't count the whole account as profit."""
+    keys = ("host", "port", "paper", "include_futures")
+    base = {k: cfg.get("moomoo", k) for k in keys}
+    raw = cfg.get("moomoo", "logins")
+    if not raw:
+        return [{"host": str(base["host"]), "port": int(base["port"]), "paper": bool(base["paper"]),
+                 "include_futures": bool(base["include_futures"]), "label": None, "since": None}]
+    if not isinstance(raw, list) or not all(isinstance(x, dict) for x in raw):
+        raise ValueError("moomoo logins must be [[moomoo.logins]] tables")
+    out, labels, ports = [], set(), set()
+    for i, lg in enumerate(raw, 1):
+        label = str(lg.get("label") or "").strip()
+        if not label:
+            raise ValueError(f'moomoo login #{i} has no label — add e.g. label = "Main"')
+        if _BAD_LABEL.search(label) or len(label) > 12:
+            raise ValueError(f"moomoo login {label!r}: a label is at most 12 characters, without spaces, '-', '|' or '·'")
+        if label in labels:
+            raise ValueError(f"moomoo login label {label!r} is used twice")
+        host, port = str(lg.get("host", base["host"])), int(lg.get("port", base["port"]))
+        if (host, port) in ports:
+            raise ValueError(f"moomoo login {label!r}: {host}:{port} is already taken by another login — "
+                             f"each login needs its own OpenD with its own api_port")
+        since = lg.get("since")
+        if since is not None:
+            try:
+                since = date.fromisoformat(str(since)).isoformat()
+            except ValueError:
+                raise ValueError(f"moomoo login {label!r}: since must be a date like 2026-10-19") from None
+        labels.add(label)
+        ports.add((host, port))
+        out.append({"host": host, "port": port, "paper": bool(lg.get("paper", base["paper"])),
+                    "include_futures": bool(lg.get("include_futures", base["include_futures"])), "label": label,
+                    "since": since})
+    return out
+
+
 def make(cfg) -> Composite:
     bs: list[Broker] = []
     for name in cfg.brokers:
         if name == "moomoo":
             from .moomoo import MoomooBroker
-            bs.append(MoomooBroker(cfg.get("moomoo", "host"), int(cfg.get("moomoo", "port")),
-                                   paper=bool(cfg.get("moomoo", "paper")),
-                                   include_futures=bool(cfg.get("moomoo", "include_futures")),
-                                   cache_dir=cfg.data_dir))
+            for lg in moomoo_logins(cfg):
+                bs.append(MoomooBroker(lg["host"], lg["port"], paper=lg["paper"], include_futures=lg["include_futures"],
+                                       cache_dir=cfg.data_dir, label=lg["label"]))
         elif name == "ibkr":
             from .ibkr import IbkrBroker
             bs.append(IbkrBroker(cfg.get("ibkr", "host"), int(cfg.get("ibkr", "port")),

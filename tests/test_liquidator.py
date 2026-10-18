@@ -127,3 +127,38 @@ def test_dry_run_never_reaches_the_real_broker(tmp_path):
     job = liq.start(b.positions(), [key(inner, "NVDA 12/18 150C")])
     job.done.wait(5)
     assert job.legs[0]["state"] == "filled"
+
+
+def test_after_the_job_it_rereads_positions_and_says_what_is_left(tmp_path):
+    # "I thought I sold it in all three accounts" — order state 'filled' is not proof; the position list is
+    b = FakeBroker.demo()
+    liq = Liquidator(b, tmp_path, "test", step_sec=0.05, now_fn=RTH)
+    job = run(liq, b, [key(b, "NVDA 12/18 150C")])
+    assert job.legs[0]["state"] == "filled"
+    assert job.closed_check == "some_left" and job.legs[0]["left"] == 10     # the fake still holds it
+    b.pos = [p for p in b.pos if p.instrument.symbol != "NVDA 12/18 150C"]   # now it is really gone
+    job2 = run(liq, b, [key(b, "AAPL")])
+    assert job2.closed_check == "some_left"                                   # AAPL still there
+    b.pos = [p for p in b.pos if p.instrument.symbol != "AAPL"]
+    assert run(liq, b, [key(b, "TSLA")]).closed_check == "some_left"
+    b.pos = []
+    assert job.view()["closed_check"] == "some_left"
+
+
+def test_closed_check_all_closed_and_dry(tmp_path):
+    b = FakeBroker.demo()
+    k = key(b, "AAPL")
+    orig = b.positions
+    calls = {"n": 0}
+
+    def positions():
+        calls["n"] += 1
+        ps = orig()
+        return ps if calls["n"] == 1 else [p for p in ps if p.instrument.symbol != "AAPL"]   # sold after the 1st read
+    b.positions = positions
+    job = run(Liquidator(b, tmp_path, "test", step_sec=0.05, now_fn=RTH), b, [k])
+    assert job.closed_check == "all_closed" and job.legs[0]["left"] == 0
+    from livepanel.brokers.fake import DryRun
+    d = DryRun(FakeBroker.demo())
+    jd = run(Liquidator(d, tmp_path, "dry", step_sec=0.05, now_fn=RTH), d, [key(d.inner, "AAPL")])
+    assert jd.closed_check == "dry"                                            # a rehearsal can't change positions

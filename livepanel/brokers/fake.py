@@ -128,6 +128,15 @@ class FakeBroker(Broker):
     def order_states(self, account_id, order_ids):
         return self.sim.states(order_ids)
 
+    needs_unlock = True
+    password = "123456"                                    # tests only
+
+    def unlock(self, password):
+        self.calls.append(("unlock",))                    # never record the password itself
+        if password != self.password:
+            raise BrokerError("wrong trade password")
+        self.unlocked = True
+
 
 class DryRun(Broker):
     """Wraps a real broker: reads pass through, orders are simulated locally."""
@@ -140,6 +149,13 @@ class DryRun(Broker):
 
     def connect(self):
         self.inner.connect()
+
+    @property
+    def needs_unlock(self) -> bool:
+        return bool(getattr(self.inner, "needs_unlock", False))
+
+    def unlock(self, password):
+        self.inner.unlock(password)                         # unlocking places no order: let a rehearsal test it too
 
     def close(self):
         self.inner.close()

@@ -1,15 +1,27 @@
 # Live Panel
 
 A local, read-mostly positions panel for **moomoo / Futu** and **Interactive Brokers**, with a careful
-one-click exit. Runs on your own machine, talks only to your broker's local gateway, never sees your password.
+one-click exit. Runs on your own machine and talks only to your broker's local gateway. It never sees your login
+password; a trade password typed into 🔓 goes to OpenD as an MD5 and is not saved.
 
-- Positions, today's P&L, this week / this month P&L (deposits stripped out), across several accounts and brokers.
+<p><img src="docs/panel.png" width="300" alt="Live Panel, small window, demo data">
+<img src="docs/settings.png" width="300" alt="Settings page"></p>
+
+- Positions, today's P&L, this week / this month P&L (deposits stripped out), across several accounts, several
+  moomoo logins and brokers — one row per symbol, every account's legs under it.
+- Each option leg says whether you are the **buyer** or the **seller**; a spread shows its dollar P&L (a % of
+  its net cost means nothing).
 - Freezes on closing marks after the bell instead of re-pulling quotes that can't change.
-- Exit button (off by default): limit orders only — start at the bid + 70% of the spread, step one tick toward
-  the bid every 10 s, never below it. Short positions are bought back the mirror way.
+- Exit (off by default): tick a symbol or single legs, confirm a list of exactly what will be sent, and it works
+  limit orders only — sell to close from the bid + 70% of the spread, buy back to close from the ask − 70%,
+  one tick toward the far side every 10 s, never past it. Afterwards it re-reads the positions and says
+  **"All closed"** or what is still held.
 
 > **Status**
-> - moomoo: read side verified against a real OpenD; exit engine verified against a simulated broker only.
+> - moomoo: read side verified against a real OpenD, including two different logins on one computer at once.
+> - Exit engine: its moomoo order calls match a tool that has placed live orders since September 2026, but this
+>   code itself has been tested against a simulated broker and rehearsed on live quotes only. The unlock step
+>   has not yet been tried against a real OpenD.
 > - IBKR: written against `ib_async` and tested against a fake gateway. **Not yet run against a real TWS / IB Gateway.**
 > - Crypto exchanges: not supported yet (the data model has room for it).
 
@@ -21,9 +33,39 @@ one-click exit. Runs on your own machine, talks only to your broker's local gate
 3. `pip install moomoo-api`
 4. In `config.toml`: `use = ["moomoo"]`. Default address `127.0.0.1:11111`.
 5. Quotes: US options L1 is free if your account has assets or US positions; otherwise buy OPRA.
-6. Live orders: the GUI OpenD has to be unlocked by hand (top-right of the OpenD window).
+6. Live orders need the login unlocked: the GUI OpenD's *Unlock* button (top right), or 🔓 in the panel.
 
 Accounts are discovered automatically. A universal account's futures sub-account is added to its equity.
+
+#### Several moomoo logins in one panel
+One OpenD serves one login, so each login needs its own OpenD on its own port. List them in the config:
+
+```toml
+[[moomoo.logins]]
+label = "Main"      # shown in the panel as "Main·SG"; at most 12 characters, no spaces or "-"
+port = 11111
+[[moomoo.logins]]
+label = "Acct2"
+port = 11112
+```
+
+Positions in the same underlying are grouped together across logins, and one exit closes the legs in every
+login (each order goes to the login that holds it). Unlock trading in each OpenD.
+
+The settings page (⚙) writes these for you. Tried with two real logins on one Windows computer:
+
+1. Download OpenD once. Copy its **command-line** folder (not the GUI one) once per extra login.
+2. In each copy's `OpenD.xml`, set a different `api_port` (11112, 11113 …).
+3. Start `OpenD.exe` in that folder and log in. OpenD 10.10 and newer ask for the account and password in the
+   window; older ones read them from `OpenD.xml` (plain text — delete it when you're done).
+4. A new computer asks for an SMS code: type `req_phone_verify_code`, then `input_phone_verify_code -code=123456`.
+5. Each account must have done moomoo's API questionnaire once
+   ([moomoo.com/about/api-disclaimer](https://www.moomoo.com/about/api-disclaimer)); otherwise OpenD logs in and exits.
+6. Keep every OpenD window open (minimized is fine). The command-line OpenD has no *Unlock* button: use 🔓 in the panel.
+
+If one OpenD is closed, that login shows "OpenD not reachable" and the others keep working; week / month wait
+until it is back, because the total would be wrong without it. A login added later gets `since = "YYYY-MM-DD"`
+(the settings page adds it): its balance on that day counts as a deposit, not as profit.
 
 ### Interactive Brokers
 1. Install TWS or IB Gateway and log in.
@@ -38,14 +80,27 @@ The TWS API has no deposit history, so IBKR week/month P&L is labelled *excludes
 
 ## Install and run
 
-You need Python 3.11 or newer ([python.org](https://www.python.org/downloads/); on Windows tick
-*Add python.exe to PATH*). Then, in a terminal (PowerShell on Windows):
+**Windows, no Python:** run `LivePanel.exe` (build it with `python scripts/build_exe.py`; it lands in `dist/`).
+The first time, it creates `%USERPROFILE%\.livepanel\config.toml` and opens the settings page: pick your broker,
+press *Test connection*, then *Save & restart*. Windows may warn about an unknown publisher (the file isn't
+code-signed): *More info → Run anyway*.
+
+**With Python 3.11 or newer** ([python.org](https://www.python.org/downloads/); on Windows tick
+*Add python.exe to PATH*), in a terminal (PowerShell on Windows):
 
 ```
 pip install "livepanel[moomoo] @ https://github.com/Somazz88/livepanel/archive/refs/heads/main.zip"
-livepanel --init           # creates ~/.livepanel/config.toml — open it and set your broker
-livepanel --window         # starts the panel in its own small window
+livepanel --window         # first run: creates ~/.livepanel/config.toml and opens the settings page
 ```
+
+**Settings page** (the ⚙ button): language, time zone, refresh interval, brokers, moomoo logins and ports, IBKR port,
+with a *Test connection* button. Saving keeps the previous file as `config.toml.bak-<time>` and restarts the panel.
+Whether the exit buttons may send orders (`[trading]`) is **not** on the page: change it in the file by hand.
+
+**Tray icon (Windows):** the panel keeps running when its window is closed or minimized. Its icon by the clock
+opens the window (left-click), and its menu has *Start with Windows* and *Quit*. Quit is refused while an exit
+job is running. Turn the icon off with `tray = false` under `[window]`. Clicking the desktop shortcut while the
+panel runs brings the existing window back, un-minimized, instead of opening a second one.
 
 Use `[ibkr]` instead of `[moomoo]` for Interactive Brokers, or `[moomoo,ibkr]` for both.
 Want to look first? `livepanel --demo --window` shows fake positions with nothing to log into.
@@ -67,7 +122,18 @@ it has a close from before that period.
 - `trading.enabled = false` by default; with `dry_run = true` it uses real positions and quotes but only simulates fills.
 - Orders start only from the page, after a confirm dialog. The server listens on 127.0.0.1 only and needs a
   per-run token, so another website open in your browser can't trigger it.
+- The confirm dialog lists every leg: account, symbol, *sell to close* or *buy back to close*, quantity.
 - Right before the first order it re-reads positions and uses `min(what you saw, closable now)`. If it can't re-read, it places nothing.
+- Sold options are bought back (moomoo reports their closable size as a negative number; it is read as a count).
+- After the job it reads the positions again and shows *All closed* or exactly what is still held: an order
+  marked "filled" is not proof the position is gone.
+- moomoo live orders need each login unlocked with its trade password: 🔓 in the panel sends it to that login's
+  OpenD only, as an MD5, and saves nothing (moomoo's library keeps that MD5 in memory to re-unlock after a
+  reconnect; the GUI OpenD's own Unlock button works too). In rehearsal mode no order is sent, but the unlock is real.
+- While orders are live (`enabled = true`, `dry_run = false`), the settings page refuses to change brokers, logins,
+  ports or *paper*: those decide which account the next exit trades, so they go through the file.
+- The server listens on 127.0.0.1 and trusts every program running on this computer (the token is in the page it
+  serves). Use it on a computer only you log into.
 - Options only during 09:30–16:00 ET. Stocks in pre/post market only if `allow_extended_hours = true` (limit orders only).
 - Non-US listings are shown but not exited (no session table, often no API quote permission).
 - Stop = fetch fresh order states, cancel what's still working, record fills that happened during the cancel.

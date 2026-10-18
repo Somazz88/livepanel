@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google" content="notranslate">
 <title>Live Panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111827'/%3E%3Cpolyline points='10,45 24,31 34,38 54,15' fill='none' stroke='%2334c759' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#fafafa;--fg:#1d1d1f;--mut:#6e6e73;--dim:#9a9aa2;--line:#e5e5ea;--card:#fff;--sub:#f4f4f6;--up:#0a8a3a;--dn:#d70015;
   --upb:rgba(10,138,58,.13);--dnb:rgba(215,0,21,.12);--acc:#0a63c9;--warn:#b25000}
@@ -37,8 +38,10 @@ tr.grp td.l{font-weight:600}
 tr.grp.open .car{transform:rotate(90deg)}
 .chg{font-weight:400;font-size:12px;margin-left:5px}
 tr.sub td{background:var(--sub);font-size:13px;padding:5px 10px}
+tr.sub td.l{white-space:normal;overflow-wrap:anywhere}
+tr.grp input[type=checkbox]{margin-right:4px}
 tr.sub td.l{padding-left:24px}
-tr.sub b{display:inline-block;min-width:26px;color:var(--mut);font-weight:600;font-size:12px}
+tr.sub b{display:inline-block;min-width:26px;color:var(--mut);font-weight:600;font-size:12px;margin-right:5px}
 .pc{display:inline-block;min-width:40px}.pc.hot{background:var(--dn);color:#fff;border-radius:4px;padding:0 4px;font-weight:600}
 .ft{color:var(--mut);font-size:12px;margin:6px 2px 0}.ft b{color:var(--fg)}
 .deals{margin-top:10px}
@@ -71,6 +74,19 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
   .pc{min-width:30px}.ft{font-size:10.5px;margin:3px 2px 0}.deals{margin-top:6px}
   #exitCmd{right:8px;bottom:6px;padding:2px 12px;font-size:12px}.errs{font-size:11px;margin:3px 0}
   .deals tr.grp td{font-size:11px;color:var(--mut)}}
+/* settings page */
+#set,#unl{position:fixed;inset:0;background:var(--bg);padding:14px 16px;overflow-y:auto;overflow-x:hidden;z-index:30}
+#set small{overflow-wrap:anywhere}
+#set .hd,#unl .hd{display:flex;justify-content:space-between;align-items:center}
+.fs{margin:10px 0;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px}
+.fs h4{margin:0 0 6px;font-size:13px}.sub2{margin:6px 0 0;padding-top:6px;border-top:1px dashed var(--line)}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}.row>label:first-child:not(.ck){min-width:70px;color:var(--mut);font-size:12px}
+label.ck{display:inline-flex;align-items:center;margin-right:10px;cursor:pointer}
+#unl input[type=password],#set input[type=text],#set input[type=number],#set select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+#set input.lbl{width:100px}#set input.port{width:84px}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.res div{font-size:12px;margin:3px 0}.res .ok{color:var(--up)}.res .bad{color:var(--dn)}
+@media (max-width:420px){#set{padding:8px 10px}.fs{padding:8px}.row>label:first-child:not(.ck){min-width:54px}#set input.lbl{width:84px}#set input.port{width:70px}#gear,#unlk{padding:1px 7px;font-size:11px;border-radius:6px}}
 /* small app window (livepanel --window, ~460px) */
 @media (max-width:560px){main{padding:10px}.sum{grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}.card{padding:8px 10px}
   .card .v{font-size:17px}th,td{padding:5px 6px}tr.sub td{padding:4px 6px}tr.sub td.l{padding-left:16px}h1{font-size:15px}#refresh{padding:4px 9px}}
@@ -82,6 +98,8 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
     <span id="status" class="pill">…</span>
     <span id="mode" class="pill" hidden></span>
     <span style="flex:1"></span>
+    <button id="unlk" hidden>🔓</button>
+    <button id="gear" hidden>⚙</button>
     <button id="refresh"></button>
   </header>
   <div id="errs" class="errs"></div>
@@ -105,6 +123,14 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
   <div id="ovw"><svg id="ovSvg"></svg><div id="ovtip"></div></div>
   <table id="ovList"></table>
 </div>
+<div id="unl" hidden>
+  <div class="hd"><b id="unlTitle"></b><button id="unlX">✕</button></div>
+  <div id="unlBody"></div>
+</div>
+<div id="set" hidden>
+  <div class="hd"><b id="setTitle"></b><button id="setX">✕</button></div>
+  <div id="setBody"></div>
+</div>
 <script>
 const CFG = /*__CFG__*/{};
 const T = {
@@ -113,8 +139,11 @@ const T = {
    notyet:"not enough history yet",loading:"loading deposits…",now:"now",
    head:["Symbol · stock today","Value","Today","P&L"],dte:"DTE",cost:"cost",stock:"stock",closedToday:"closed today",
    footMv:"Positions",expiry:"expiry",deals:"Recent fills",todayN:n=>`today ${n}`,buy:"Buy",sell:"Sell",
-   exitSel:"Exit selected",exitAll:"Exit all",exitCmd:"Exit",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",
-   confirm:(n,m)=>`Exit ${n} position(s)?\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread, one tick toward the bid every 10 s, never below the bid.`,
+   shortTag:"seller",longTag:"buyer",soldAt:"sold at",close:{SELL:"sell to close",BUY:"buy back to close"},
+   exitSel:"Exit selected",exitAll:"Exit all",exitCmd:"Exit",exitCmdOld:"Old exit tool · LIVE",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",dryShort:"Rehearsal · no orders",modes:{dry:"rehearsal",real:"LIVE",paper:"paper",test:"test"},placed:n=>`placed ${n}`,
+   confirm:(n,m,list)=>`Exit ${n} position(s)?\n\n${list}\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread (ask − 70% when buying back), one tick toward it every 10 s, never past it.`,
+   allClosed:"✅ All closed — positions re-read after the job",someLeft:"⚠️ Still held after the job:",checkUnknown:"Couldn't re-read positions — check the broker",
+   dryNote:"Rehearsal: real positions don't change",grpAll:"select every leg of this symbol",
    note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",qty:"Qty",price:"Price",bidask:"Bid / Ask",state:"State",filled:"Filled",inst:"Instrument",
    chart:"Equity (deposits included)",daily:"Daily",intra:"Today",sparkHint:"Click for the daily / today chart",
    colDate:"Date",colTime:"Time (every 30 min)",colEq:"Equity",colChg:"Change",depIn:"deposit",depOut:"withdrawal",
@@ -129,8 +158,11 @@ const T = {
    notyet:"记录还不够",loading:"正在拉出入金…",now:"现在",
    head:["标的 · 正股今天","市值","今日","持仓"],dte:"DTE",cost:"成本",stock:"正股",closedToday:"今天已平",
    footMv:"持仓市值",expiry:"到期",deals:"📜 最近买卖",todayN:n=>`今天 ${n} 笔`,buy:"买",sell:"卖",
-   exitSel:"清选中",exitAll:"全部清仓",exitCmd:"清仓",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",
-   confirm:(n,m)=>`清掉 ${n} 个持仓？\n\n模式：${m}\n只挂限价单：首挂买价 + 70% 价差，每 10 秒往买价降一格，永不低于买价。`,
+   shortTag:"卖方",longTag:"买方",soldAt:"卖出价",close:{SELL:"卖出平仓",BUY:"买回平仓"},
+   exitSel:"清选中",exitAll:"全部清仓",exitCmd:"清仓",exitCmdOld:"旧工具清仓 · 真单",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",dryShort:"演练 · 不下单",modes:{dry:"演练",real:"真单",paper:"模拟盘",test:"测试"},placed:n=>`已挂 ${n} 条`,
+   confirm:(n,m,list)=>`清掉 ${n} 条腿？\n\n${list}\n\n模式：${m}\n只挂限价单：卖出平仓从买价 + 70% 价差开始、买回平仓从卖价 − 70% 价差开始，每 10 秒往对手价挪一格，永不越过。`,
+   allClosed:"✅ 全部平掉 —— 清完已重新读持仓确认",someLeft:"⚠️ 清完还剩：",checkUnknown:"清完读不到持仓 —— 去券商确认",
+   dryNote:"演练：真实持仓不会变",grpAll:"选这个标的的全部腿",
    note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",qty:"数量",price:"价格",bidask:"买 / 卖",state:"状态",filled:"成交",inst:"标的",
    chart:"总资产走势(含出入金)",daily:"每日",intra:"今天",sparkHint:"点一下看每日 / 今天的走势",
    colDate:"日期",colTime:"时间(每 30 分)",colEq:"总资产",colChg:"变化",depIn:"入金",depOut:"出金",
@@ -157,20 +189,21 @@ function card(k,v,cls,note){return `<div class="card"><div class="k">${k}</div><
 
 function render(s){
   if (s.ui_ver && CFG.ui_ver && s.ui_ver !== CFG.ui_ver) { location.reload(); return; }   // page upgraded on disk
+  if (s.run_id && CFG.run_id && s.run_id !== CFG.run_id) { location.reload(); return; }   // server restarted (new token)
   last = s;
   const st = $("status");
   if (!s.ok && !s.positions){ st.className="pill err"; st.textContent = s.message||"…"; return; }
   st.className = "pill " + (s.frozen ? "" : "live");
   st.textContent = (s.frozen ? (s.pulled_live ? L.frozen : L.after) : L.live+" · ") + (s.as_of||"");
   const m = $("mode");
-  if (CFG.trading){ m.hidden=false; m.className = "pill "+(CFG.dry_run?"dry":"err"); m.textContent = CFG.dry_run?L.dry:L.real; }
+  if (CFG.trading){ m.hidden=false; m.className = "pill "+(CFG.dry_run?"dry":"err"); m.textContent = CFG.dry_run?(DENSE.matches?L.dryShort:L.dry):L.real; m.title = CFG.dry_run?L.dry:L.real; }
   const errs = Object.entries(s.errors||{}).map(([k,v])=>`${k}: ${v}`);
   (s.accounts||[]).filter(a=>!a.ok).forEach(a=>errs.push(`${a.account_id}: ${a.error||"?"}`));
   if (s.calendar_stale) errs.push(L.calstale);
   $("errs").innerHTML = errs.map(e=>`<div>${esc(e)}</div>`).join("");
 
   const p = s.periods||{};
-  const per = x => x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${x.unconverted.join("/")}`:"")] : ["…","",p.loading?L.loading:L.notyet];
+  const per = x => x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${esc(x.unconverted.join("/"))}`:"")] : ["…","",p.loading?L.loading:L.notyet];
   const w = per(p.week), mo = per(p.month);
   const short = a => String(a).split("-")[0];
   const accts = (s.accounts||[]).map(a=>`${esc(short(a.account_id))} ${fmt(a.equity,0)}`).join(" · ");
@@ -228,17 +261,22 @@ function drawGroups(s){
     const chg = g.und_chg==null ? "" : `<span class="chg ${g.und_chg>0.005?"up":g.und_chg<-0.005?"dn":"flat"}">${(g.und_chg>0?"+":"")+g.und_chg.toFixed(1)}%</span>`;
     const col = g.today >= 0 ? "var(--upb)" : "var(--dnb)";
     const bar = `background:linear-gradient(to left,${col} ${Math.round(g.bar*100)}%,transparent ${Math.round(g.bar*100)}%)`;
-    const pct = g.pct==null ? "—" : (g.pct>0?"+":"")+Math.round(g.pct)+"%";
-    h += `<tr class="grp${open?" open":""}" data-tk="${esc(g.tk)}"><td class="l"><i class="car">▶</i>${esc(g.tk)}${chg}</td>`+
+    const pct = g.mixed ? pm(g.pl,0) : g.pct==null ? "—" : (g.pct>0?"+":"")+Math.round(g.pct)+"%";   // spread: dollars, not %
+    const gk = g.legs.filter(l=>l.closable>0).map(l=>l.key), gsel = gk.filter(k=>sel.has(k)).length;
+    const gcb = CFG.trading && gk.length ? `<input type="checkbox" data-g="${esc(g.tk)}" title="${L.grpAll}"${gsel===gk.length?" checked":""}>` : "";
+    h += `<tr class="grp${open?" open":""}" data-tk="${esc(g.tk)}"><td class="l">${gcb}<i class="car">▶</i>${esc(g.tk)}${chg}</td>`+
          `<td>${g.legs.length ? fmt(g.mv,0) : "—"}</td><td style="${bar}" class="${sgn(g.today)}">${pm(g.today,0)}</td>`+
-         `<td><span class="pc ${g.pct==null?"flat":sgn(g.pl)}${g.hot?" hot":""}">${pct}</span></td></tr>`;
+         `<td><span class="pc ${g.mixed?sgn(g.pl):g.pct==null?"flat":sgn(g.pl)}${g.hot?" hot":""}">${pct}</span></td></tr>`;
     if (!open) continue;
     for (const l of g.legs){
       const what = l.what === "stock" ? L.stock : esc(l.what);
       const dte = l.dte==null ? "" : ` · ${L.dte} ${l.dte}`;
-      const px = (l.cost!=null && l.px!=null) ? ` · ${L.cost} ${fmt(l.cost,2)} → <span class="${l.px>l.cost+1e-9?"up":l.px<l.cost-1e-9?"dn":"flat"}">${fmt(l.px,2)}</span>` : "";
+      const gain = l.qty < 0 ? l.cost - l.px : l.px - l.cost;        // a short gains when the price falls
+      const px = (l.cost!=null && l.px!=null) ? ` · ${l.qty < 0 ? L.soldAt : L.cost} ${fmt(l.cost,2)} → <span class="${gain>1e-9?"up":gain<-1e-9?"dn":"flat"}">${fmt(l.px,2)}</span>`+
+        (l.pct!=null ? ` <span class="${sgn(l.pl)}">${l.pct>0?"+":""}${Math.round(l.pct)}%</span>` : "") : "";
       const cb = CFG.trading ? `<input type="checkbox" data-k="${esc(l.key)}" ${sel.has(l.key)?"checked":""}>` : "";
-      h += `<tr class="sub"><td class="l" colspan="4">${cb}<b>${esc(l.acct)}</b>${what} ×${fmt(Math.abs(l.qty),0)}${l.qty<0?" (short)":""}${dte}${px}</td></tr>`;
+      const who = l.qty < 0 ? ` <span class="pill dry">${L.shortTag}</span>` : (l.what !== "stock" ? ` <small>${L.longTag}</small>` : "");
+      h += `<tr class="sub"><td class="l" colspan="4">${cb}<b>${esc(l.acct)}</b>${what} ×${fmt(Math.abs(l.qty),0)}${who}${dte}${px}</td></tr>`;
     }
     for (const c of g.closed)
       h += `<tr class="sub"><td class="l" colspan="4"><b>${esc(String(c.account).split("-")[0])}</b>${c.what==="stock"?L.stock:esc(c.what)} ${L.closedToday} · <span class="${sgn(c.today)}">${pm(c.today,0)}</span></td></tr>`;
@@ -249,8 +287,16 @@ function drawGroups(s){
     try { localStorage.setItem("lp_open", JSON.stringify([...OPEN])); } catch(e) {}
     render(last);
   });
-  document.querySelectorAll("#pos input[type=checkbox]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
-    cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); syncBtns();}; });
+  document.querySelectorAll("#pos input[data-k]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
+    cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); render(last);}; });
+  document.querySelectorAll("#pos input[data-g]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
+    cb.onchange=()=>{ const g = gs.find(x=>x.tk===cb.dataset.g); if(!g) return;
+      g.legs.filter(l=>l.closable>0).forEach(l=>cb.checked?sel.add(l.key):sel.delete(l.key));
+      if (cb.checked) OPEN.add(g.tk);                       // show what was just selected
+      render(last); }; });
+  document.querySelectorAll("#pos input[data-g]").forEach(cb=>{ const g = gs.find(x=>x.tk===cb.dataset.g);
+    const ks = g ? g.legs.filter(l=>l.closable>0).map(l=>l.key) : [], n = ks.filter(k=>sel.has(k)).length;
+    cb.indeterminate = n>0 && n<ks.length; });
   const f = s.foot||{};
   $("foot").innerHTML = gs.length ? `${L.footMv} <b>$${fmt(f.mv,0)}</b>` + (f.expiry ? ` · ${f.expiry.slice(5).replace("-","/")} ${L.expiry}` : "") : "";
 }
@@ -307,11 +353,28 @@ function drawOv(){
 }
 
 function syncBtns(){ $("exitSel").disabled = sel.size===0; $("exitSel").textContent = L.exitSel+(sel.size?` (${sel.size})`:""); }
+function jobMsg(m){ return String(m).replace(/^placed (\d+)/, (_, n) => L.placed(n)); }   // the engine speaks English
+function checkLine(j){
+  if (!j.done || !j.closed_check) return "";
+  if (j.closed_check === "dry") return `<div class="mut">${L.dryNote}</div>`;
+  if (j.closed_check === "unknown") return `<div class="dn"><b>${L.checkUnknown}</b></div>`;
+  if (j.closed_check === "all_closed") return `<div class="up"><b>${L.allClosed}</b></div>`;
+  const left = j.legs.filter(l=>l.left>0).map(l=>`${esc(String(l.account).split("-")[0])} ${esc(l.name)} ×${fmt(l.left,0)}`).join(" · ");
+  return `<div class="dn"><b>${L.someLeft}</b> ${left}</div>`;
+}
 function renderJobs(jobs){
-  $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${j.mode} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
-   ${j.message?`<small>${esc(j.message)}</small>`:""}
+  if (DENSE.matches){                                          // the small window: one line per leg
+    $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} · ${(L.modes||{})[j.mode]||esc(j.mode)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>`+
+      checkLine(j) + (j.message?`<small>${esc(jobMsg(j.message))}</small>`:"") +
+      j.legs.map(l=>`<div class="ft">${esc(String(l.account).split("-")[0])} ${esc(l.name)} · ${(L.close||{})[l.side]||esc(l.side)} ×${fmt(l.qty,0)}`+
+        ` @${fmt(l.price,2)} · ${L.st[l.state]||esc(l.state)} · ${L.filled} ${fmt(l.filled,0)}</div>`).join("") + `</div>`).join("");
+    document.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>post("/api/stop",{job:b.dataset.stop}));
+    return;
+  }
+  $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${(L.modes||{})[j.mode]||esc(j.mode)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
+   ${checkLine(j)}${j.message?`<small>${esc(jobMsg(j.message))}</small>`:""}
    <div class="tbl"><table><tr><th class="l">${L.inst}</th><th>${L.side}</th><th>${L.qty}</th><th>${L.price}</th><th>${L.bidask}</th><th>${L.filled}</th><th class="l">${L.state}</th></tr>
-   ${j.legs.map(l=>`<tr><td class="l">${esc(l.name)}</td><td>${l.side}</td><td>${fmt(l.qty,0)}</td><td>${fmt(l.price,2)}</td><td>${fmt(l.bid,2)} / ${fmt(l.ask,2)}</td><td>${fmt(l.filled,0)}</td><td class="l">${L.st[l.state]||esc(l.state)}${l.note?` <small>${esc(l.note)}</small>`:""}</td></tr>`).join("")}
+   ${j.legs.map(l=>`<tr><td class="l">${esc(l.name)}</td><td>${(L.close||{})[l.side]||esc(l.side)}</td><td>${fmt(l.qty,0)}</td><td>${fmt(l.price,2)}</td><td>${fmt(l.bid,2)} / ${fmt(l.ask,2)}</td><td>${fmt(l.filled,0)}</td><td class="l">${L.st[l.state]||esc(l.state)}${l.note?` <small>${esc(l.note)}</small>`:""}</td></tr>`).join("")}
    </table></div></div>`).join("");
   document.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>post("/api/stop",{job:b.dataset.stop}));
 }
@@ -321,21 +384,150 @@ async function post(path, body){
 }
 function exitKeys(keys){
   if(!keys.length) return;
-  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real))) return;
+  const legs = (last&&last.groups||[]).flatMap(g=>g.legs.map(l=>({...l, tk:g.tk}))).filter(l=>keys.includes(l.key));
+  const list = legs.map(l=>`${l.acct}  ${l.tk} ${l.what==="stock"?L.stock:l.what}  ${(L.close||{})[l.side]||l.side} ×${fmt(l.closable,0)}`).join("\n");
+  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real, list))) return;
   post("/api/exit",{keys}); sel.clear();
 }
 async function poll(){ try{ const r = await fetch("/api/state",{cache:"no-store"}); render(await r.json()); }catch(e){ $("status").className="pill err"; $("status").textContent="offline"; } }
-$("refresh").textContent = L.refresh; $("refresh").onclick = ()=>post("/api/refresh");
+const setRefreshLabel = () => { $("refresh").textContent = DENSE.matches ? "↻" : L.refresh; $("refresh").title = L.refresh; };
+setRefreshLabel(); DENSE.addEventListener("change", setRefreshLabel); $("refresh").onclick = ()=>post("/api/refresh");
 if (CFG.trading){ $("tradebar").hidden=false; $("exitAll").textContent=L.exitAll; $("tradeNote").textContent=L.note;
   $("exitSel").onclick=()=>exitKeys([...sel]);
   $("exitAll").onclick=()=>exitKeys((last&&last.groups||[]).flatMap(g=>g.legs.filter(l=>l.closable>0).map(l=>l.key))); }
-if (CFG.exit_command){ const b = $("exitCmd"); b.hidden = false; b.textContent = L.exitCmd; b.onclick = ()=>post("/api/exit_command"); }
+// with the built-in exit on too, say which red button is which: the old tool always sends real orders
+if (CFG.exit_command){ const b = $("exitCmd"); b.hidden = false; b.textContent = CFG.trading ? L.exitCmdOld : L.exitCmd; b.onclick = ()=>post("/api/exit_command"); }
 $("eq").onclick = () => { $("ov").hidden = false; drawOv(); };
 $("ovX").onclick = () => { $("ov").hidden = true; };
 $("ovTitle").textContent = L.chart;
 document.querySelectorAll("#ov [data-m]").forEach(t => { t.textContent = t.dataset.m==="daily" ? L.daily : L.intra;
   t.onclick = () => { ovMode = t.dataset.m; document.querySelectorAll("#ov [data-m]").forEach(x=>x.classList.toggle("on", x===t)); drawOv(); }; });
 if (new URLSearchParams(location.search).has("chart")) $("ov").hidden = false;     // ?chart: open the chart (screenshots)
+// ── settings page (only when the server offers it: an older server never sets CFG.settings, so the gear stays hidden) ──
+const S = {
+ en:{title:"Settings",lang:"Language",brokers:"Brokers",demo:"Demo data",mm:"moomoo",
+   mmNote:"One OpenD per moomoo login, each on its own port (api_port in OpenD.xml). With one login the name can stay empty.",
+   label:"Name",port:"Port",add:"+ Add a login",del:"Remove",paper:"Use the simulate (paper) account",ib:"Interactive Brokers",
+   ibPorts:{7496:"TWS live",7497:"TWS paper",4001:"Gateway live",4002:"Gateway paper"},tz:"Time zone",every:"Refresh",sec:"s",
+   test:"Test connection",save:"Save & restart",testing:"Testing…",saving:"Saving…",restarting:"Restarting — the page reloads by itself",
+   saved:"Saved",trade:"Exit orders",tradeOff:"off",tradeDry:"dry run (no orders are sent)",tradeLive:"LIVE ORDERS",
+   tradeNote:"Can only be changed by editing the config file, so a click here can never turn orders on. While orders are live, brokers, logins and ports can't be changed here either.",file:"File",
+   code:{ok:"connected",closed:"nothing is listening on that port — start OpenD / TWS, or check the port",error:"error",timeout:"no answer in time"},
+   accounts:"accounts",welcome:"First run: pick your broker, press Test connection, then Save & restart.",
+   lnk:"Desktop icon",lnkDone:"Icon placed:"},
+ zh:{title:"设置",lang:"语言",brokers:"券商",demo:"演示数据",mm:"moomoo",
+   mmNote:"每个 moomoo 号开一个 OpenD，各用不同端口（OpenD.xml 里的 api_port）。只有一个号时名称可以留空。",
+   label:"名称",port:"端口",add:"+ 加一个登录",del:"删除",paper:"用模拟账户",ib:"盈透 IBKR",
+   ibPorts:{7496:"TWS 实盘",7497:"TWS 模拟",4001:"Gateway 实盘",4002:"Gateway 模拟"},tz:"时区",every:"刷新间隔",sec:"秒",
+   test:"测试连线",save:"保存并重启",testing:"测试中…",saving:"保存中…",restarting:"重启中…页面会自己刷新",
+   saved:"已保存",trade:"清仓下单",tradeOff:"关",tradeDry:"演练（不会真的下单）",tradeLive:"真实下单",
+   tradeNote:"这一项只能手动改设定文件，在这里点不会打开下单。真实下单开着的时候，券商、登录和端口也不能在这里改。",file:"设定文件",
+   code:{ok:"连上了",closed:"这个端口没有程序在听 —— 先打开 OpenD / TWS，或检查端口",error:"出错",timeout:"等太久没回应"},
+   accounts:"账户",welcome:"第一次使用：选好券商，按「测试连线」，没问题再按「保存并重启」。",
+   lnk:"桌面放图标",lnkDone:"已放到："}
+};
+const SL = S[CFG.lang] || S.en;
+let FORM = null, TZS = [], CFGPATH = "";
+async function api(path, body){
+  const r = await fetch(path, body===undefined ? {headers:{"X-Token":CFG.token},cache:"no-store"}
+    : {method:"POST",headers:{"Content-Type":"application/json","X-Token":CFG.token},body:JSON.stringify(body)});
+  const j = await r.json().catch(()=>({})); return [r.ok, j];
+}
+async function openSettings(){
+  $("set").hidden = false; $("setBody").innerHTML = `<div class="mut">…</div>`;
+  const [ok, j] = await api("/api/config");
+  if (!ok){ $("setBody").innerHTML = `<div class="errs">${esc(j.error||"?")}</div>`; return; }
+  FORM = j.form; TZS = j.timezones||[]; CFGPATH = j.path||""; drawSettings();
+}
+function collect(){
+  const f = FORM; if (!f) return;
+  if ($("sLang")) f.lang = $("sLang").value;
+  if ($("sTz")) f.display_tz = $("sTz").value;
+  if ($("sRef")) f.refresh_sec = +$("sRef").value;
+  const rows = document.querySelectorAll("#setBody .lg");
+  if (rows.length) f.moomoo.logins = [...rows].map(r => ({label:r.querySelector(".lbl").value.trim(), port:+r.querySelector(".port").value}));
+  if ($("sPaper")) f.moomoo.paper = $("sPaper").checked;
+  if ($("sIb")) f.ibkr.port = +$("sIb").value;
+}
+function drawSettings(){
+  const f = FORM, m = f.moomoo, has = b => f.brokers.includes(b);
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${String(v)===String(cur)?" selected":""}>${esc(label??v)}</option>`;
+  const tzs = TZS.includes(f.display_tz) ? TZS : [f.display_tz, ...TZS];
+  const refs = [10,20,30,60,120].includes(+f.refresh_sec) ? [10,20,30,60,120] : [+f.refresh_sec,10,20,30,60,120];
+  let h = CFG.first_run ? `<p class="mut">${SL.welcome}</p>` : "";
+  h += `<div class="fs"><div class="row"><label>${SL.lang}</label><select id="sLang">${opt("zh",f.lang,"中文")}${opt("en",f.lang,"English")}</select></div>`+
+       `<div class="row"><label>${SL.tz}</label><select id="sTz">${tzs.map(z=>opt(z,f.display_tz)).join("")}</select></div>`+
+       `<div class="row"><label>${SL.every}</label><select id="sRef">${refs.map(v=>opt(v,f.refresh_sec,v+" "+SL.sec)).join("")}</select></div></div>`;
+  h += `<div class="fs"><h4>${SL.brokers}</h4><div class="row">`+
+       ["moomoo","ibkr","demo"].map(b=>`<label class="ck"><input type="checkbox" data-b="${b}"${has(b)?" checked":""}>${b==="moomoo"?SL.mm:b==="ibkr"?SL.ib:SL.demo}</label>`).join("")+`</div>`;
+  if (has("moomoo")) h += `<div class="sub2"><small>${SL.mmNote}</small>`+
+       m.logins.map((lg,i)=>`<div class="row lg"><input class="lbl" type="text" maxlength="12" placeholder="${SL.label}" value="${esc(lg.label)}">`+
+         `<input class="port" type="number" min="1" max="65535" value="${esc(lg.port)}">${m.logins.length>1?`<button data-del="${i}">${SL.del}</button>`:""}</div>`).join("")+
+       `<div class="row"><button id="sAdd">${SL.add}</button><label class="ck"><input type="checkbox" id="sPaper"${m.paper?" checked":""}>${SL.paper}</label></div></div>`;
+  if (has("ibkr")) h += `<div class="sub2"><div class="row"><label>${SL.ib}</label><select id="sIb">`+
+       Object.entries(SL.ibPorts).map(([p,n])=>opt(p,f.ibkr.port,`${p} · ${n}`)).join("")+`</select></div></div>`;
+  h += `</div>`;
+  const t = f.trading||{};
+  h += `<div class="fs"><div class="row"><label>${SL.trade}</label><b class="${t.enabled&&!t.dry_run?"dn":""}">${!t.enabled?SL.tradeOff:t.dry_run?SL.tradeDry:SL.tradeLive}</b></div>`+
+       `<small>${SL.tradeNote}</small><br><small>${SL.file}: ${esc(CFGPATH)}</small></div>`;
+  h += `<div class="bar"><button id="sTest">${SL.test}</button><button id="sSave" class="pri">${SL.save}</button><button id="sLnk">${SL.lnk}</button></div><div id="sRes" class="res"></div>`;
+  $("setBody").innerHTML = h;
+  document.querySelectorAll("#setBody [data-b]").forEach(cb => cb.onchange = () => { collect(); const b = cb.dataset.b;
+    FORM.brokers = cb.checked ? [...new Set([...FORM.brokers, b])] : FORM.brokers.filter(x=>x!==b); drawSettings(); });
+  if ($("sAdd")) $("sAdd").onclick = () => { collect(); const ps = FORM.moomoo.logins.map(l=>+l.port||0);
+    FORM.moomoo.logins.push({label:"", port:Math.max(11110, ...ps)+1}); drawSettings(); };
+  document.querySelectorAll("#setBody [data-del]").forEach(b => b.onclick = () => { collect(); FORM.moomoo.logins.splice(+b.dataset.del,1); drawSettings(); });
+  $("sTest").onclick = async () => { collect(); $("sRes").innerHTML = `<div class="mut">${SL.testing}</div>`;
+    const [ok, j] = await api("/api/config/test", {form:FORM});
+    $("sRes").innerHTML = ok ? j.rows.map(r=>`<div class="${r.code==="ok"?"ok":"bad"}">${r.code==="ok"?"✅":"❌"} ${esc(r.name)} — ${SL.code[r.code]||esc(r.code)}`+
+      `${r.detail?` <small>${esc(r.detail)}</small>`:""}${(r.accounts||[]).length?` · ${SL.accounts}: ${r.accounts.map(esc).join(", ")}`:""}</div>`).join("")
+      : `<div class="bad">${esc(j.error||"?")}</div>`; };
+  $("sLnk").onclick = async () => { const [ok, j] = await api("/api/shortcut", {});
+    $("sRes").innerHTML = ok ? `<div class="ok">${SL.lnkDone} ${esc(j.path)}</div>` : `<div class="bad">${esc(j.error||"?")}</div>`; };
+  $("sSave").onclick = async () => { collect(); $("sRes").innerHTML = `<div class="mut">${SL.saving}</div>`;
+    const [ok, j] = await api("/api/config", {form:FORM});
+    if (!ok){ $("sRes").innerHTML = `<div class="bad">${esc(j.error||"?")}</div>`; return; }
+    $("sRes").innerHTML = `<div class="ok">${SL.saved}</div><div class="mut">${SL.restarting}</div>`;
+    const [ok2, j2] = await api("/api/restart", {});
+    if (!ok2) $("sRes").innerHTML += `<div class="bad">${esc(j2.error||"?")}</div>`; };
+}
+$("setTitle").textContent = SL.title;
+$("setX").onclick = () => { $("set").hidden = true; };
+if (CFG.settings){ const g = $("gear"); g.hidden = false; g.title = SL.title; g.onclick = openSettings;
+  if (CFG.first_run || new URLSearchParams(location.search).has("settings")) openSettings(); }   // ?settings: open it (screenshots)
+// ── unlock trading (only when [trading] is on): one trade password per moomoo login, sent once, never kept ──
+const U = {
+ en:{title:"Unlock trading",note:"Live orders on moomoo need each login's trade password first. It goes only to that login's OpenD on this computer and is not saved. The GUI OpenD's own Unlock button works too.",
+   dryWarn:"Rehearsal mode sends no orders, but this unlock is real: the login's OpenD stays unlocked until it restarts.",pw:"Trade password",go:"Unlock",done:"unlocked",none:"No login here needs unlocking (paper accounts don't).",bad:"failed",off:"OpenD not connected"},
+ zh:{title:"解锁交易",note:"moomoo 真实下单前，每个号都要先用它自己的交易密码解锁。密码只交给这台电脑上那个号的 OpenD，不存档。图形版 OpenD 右上角的「解锁」按钮也可以用。",
+   dryWarn:"演练模式不会下单，但这里的解锁是真的：这个号的 OpenD 会保持解锁，直到它重开。",pw:"交易密码",go:"解锁",done:"已解锁",none:"这里没有需要解锁的号（模拟账户不用解锁）。",bad:"失败",off:"OpenD 没连上"}
+};
+const UL = U[CFG.lang] || U.en;
+function drawUnlock(){
+  const s = last || {}, rows = (s.logins||[]).filter(l => l.unlock);
+  if (!rows.length){ $("unlBody").innerHTML = `<p class="mut">${UL.none}</p>`; return; }
+  $("unlBody").innerHTML = `<p class="mut" style="font-size:12px">${UL.note}</p>` + (CFG.dry_run ? `<p class="dn" style="font-size:12px">${UL.dryWarn}</p>` : "") + rows.map((l, i) => {
+    const t = (s.unlocked||{})[l.name];
+    return `<div class="fs"><div class="row"><b>${esc(l.label)}</b>${t ? ` <span class="up">✅ ${UL.done} ${esc(t)}</span>` : ""}`+
+      `${l.connected ? "" : ` <span class="dn">${UL.off}</span>`}</div>`+
+      `<div class="row"><input type="password" id="pw${i}" autocomplete="off" placeholder="${UL.pw}" maxlength="64">`+
+      `<button data-u="${i}" class="pri">${UL.go}</button></div><div class="res" id="ur${i}"></div></div>`; }).join("");
+  rows.forEach((l, i) => {
+    const btn = document.querySelector(`#unlBody [data-u="${i}"]`), inp = $("pw" + i);
+    btn.onclick = async () => {
+      const pw = inp.value; inp.value = "";                       // cleared before it is even sent
+      if (!pw) return;
+      btn.disabled = true;
+      const [ok, j] = await api("/api/unlock", {login: l.name, password: pw});
+      btn.disabled = false;
+      $("ur" + i).innerHTML = ok ? `<div class="ok">✅ ${UL.done}</div>` : `<div class="bad">${UL.bad}: ${esc(j.error||"?")}</div>`;
+    };
+    inp.onkeydown = e => { if (e.key === "Enter") btn.click(); };
+  });
+}
+$("unlTitle").textContent = UL.title;
+$("unlX").onclick = () => { $("unl").hidden = true; };
+if (CFG.trading){ const u = $("unlk"); u.hidden = false; u.title = UL.title; u.onclick = () => { $("unl").hidden = false; drawUnlock(); }; }
 poll(); setInterval(poll, 3000);
 </script>
 </body>

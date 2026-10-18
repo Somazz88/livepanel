@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "livepanel"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local live positions panel for moomoo and Interactive Brokers, with a careful one-click exit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -26,4 +26,4 @@ Homepage = "https://github.com/Somazz88/livepanel"
 include = ["livepanel*"]
 
 [tool.setuptools.package-data]
-livepanel = ["web/*.html", "config.example.toml"]
+livepanel = ["web/*.html", "web/*.ico", "config.example.toml"]

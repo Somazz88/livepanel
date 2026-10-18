@@ -56,6 +56,12 @@ class Broker(ABC):
         return {}
 
     # ── trading ──────────────────────────────────────────────────────────
+    needs_unlock = False                 # True: live orders need the trade password once per session (moomoo)
+
+    def unlock(self, password: str) -> None:
+        """Unlock live trading with the trade password. Brokers that don't use one raise."""
+        raise BrokerError(f"{self.name}: no trade password is used here")
+
     def place_limit(self, account_id: str, inst: Instrument, side: Side, qty: float, price: float,
                     session: str = "rth") -> str:
         raise BrokerError(f"{self.name}: trading not implemented")

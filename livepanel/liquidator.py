@@ -41,6 +41,7 @@ class Job(threading.Thread):
         self.stop_flag = threading.Event()
         self.done = threading.Event()
         self.message = ""
+        self.closed_check = None                           # after the run: all_closed | some_left | unknown | dry
         self._lock = threading.Lock()
 
     # ── bookkeeping ──────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ class Job(threading.Thread):
     def view(self) -> dict:
         with self._lock:
             return {"id": self.id, "mode": self.mode, "done": self.done.is_set(), "message": self.message,
+                    "closed_check": self.closed_check,
                     "legs": [{k: v for k, v in l.items() if k != "inst"} for l in self.legs]}
 
     def _limit(self, kind: str, acc: str):
@@ -68,11 +70,43 @@ class Job(threading.Thread):
     def run(self):
         try:
             self._run()
+            self._confirm_closed()
         except Exception as ex:
             self.message = f"error: {scrub(ex)} — orders already placed are still live at the broker"
             self.log({"ev": "error", "err": scrub(repr(ex), 300)})
         finally:
             self.done.set()
+
+    def _confirm_closed(self):
+        """After the job, read the positions again and say what is still held. Order states can say "filled"
+        while the account still holds the leg (a different leg, a partial, a lagging position list) — the
+        question that matters is "is it gone?", and only the position list answers it."""
+        if self.mode == "dry":
+            self.closed_check = "dry"                      # a rehearsal never changes the real positions
+            return
+        left = None
+        # the position list can lag a fill by a second or two (scaled with the step, so tests stay fast)
+        for wait in (min(2.0, self.step_sec * 2), min(3.0, self.step_sec * 3)):
+            time.sleep(wait)
+            try:
+                now = {f"{p.account_id}|{p.instrument.key}": p for p in self.b.positions()}
+            except Exception as ex:
+                self.log({"ev": "confirm_fail", "err": scrub(ex)})
+                continue
+            left = {}
+            for leg in self.legs:
+                p = now.get(leg["key"])
+                same_side = p is not None and (p.qty > 0) == (leg["side"] == "SELL")
+                left[leg["key"]] = abs(p.qty) if same_side and p.qty else 0.0
+            if not any(left.values()):
+                break
+        if left is None:
+            self.closed_check = "unknown"
+            return
+        for leg in self.legs:
+            self.set(leg, left=left.get(leg["key"], 0.0))
+        self.closed_check = "all_closed" if not any(left.values()) else "some_left"
+        self.log({"ev": "confirm", "left": {k: v for k, v in left.items() if v}})
 
     def _run(self):
         b = self.b

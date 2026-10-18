@@ -38,7 +38,7 @@ def group_positions(positions: list[Position], und: dict[str, Quote], today_et: 
         if i.currency != base:
             continue                                   # other currencies are listed separately, not summed in
         g = groups.setdefault(_group_key(p), {"tk": _group_key(p), "mv": 0.0, "today": 0.0, "pl": 0.0, "legs": [],
-                                              "closed": [], "has_opt": False})
+                                              "closed": [], "has_opt": False, "sides": set()})
         g["today"] += p.today_pnl or 0.0
         if p.qty == 0:
             if p.today_pnl:
@@ -50,18 +50,25 @@ def group_positions(positions: list[Position], und: dict[str, Quote], today_et: 
                 expiries.add(i.expiry)
         g["mv"] += p.market_value or 0.0
         g["pl"] += p.unrealized_pnl or 0.0
+        g["sides"].add("short" if p.qty < 0 else "long")
+        basis = (p.market_value or 0.0) - (p.unrealized_pnl or 0.0)        # what went in (a short's is the credit, < 0)
         g["legs"].append({
             "key": f"{p.account_id}|{i.key}", "account": p.account_id, "acct": str(p.account_id).split("-")[0],
             "what": _what(p), "qty": p.qty, "closable": p.closable_qty if p.closable_qty is not None else abs(p.qty),
             "side": p.side_to_close.value, "dte": (i.expiry - today_et).days if i.expiry else None,
             "cost": p.avg_price, "px": p.price, "today": p.today_pnl, "mv": p.market_value, "pl": p.unrealized_pnl,
+            "pct": round(p.unrealized_pnl / abs(basis) * 100, 1) if p.unrealized_pnl is not None and abs(basis) > 0.005 else None,
             "symbol": i.symbol})
     out = []
     for g in groups.values():
         if not g["legs"] and not any(abs(c["today"]) > 0.5 for c in g["closed"]):
             continue
         cost = g["mv"] - g["pl"]
-        pct = g["pl"] / cost * 100 if g["legs"] and cost > 0 else None
+        # long and short legs together (a spread): net cost can be tiny or negative, so a % of it means nothing
+        # (a bought call + a sold put showed -88%). Such a group shows its dollar P&L instead.
+        mixed = len(g.pop("sides")) > 1
+        # a seller-only group's basis is the money received (< 0): its size is still what's at stake
+        pct = g["pl"] / abs(cost) * 100 if g["legs"] and abs(cost) > 0.005 and not mixed else None
         q = und.get(g["tk"]) if show_und else None
         chg = None
         if q and q.last and q.prev_close:
@@ -69,7 +76,8 @@ def group_positions(positions: list[Position], und: dict[str, Quote], today_et: 
         g["legs"].sort(key=lambda l: (l["what"], l["acct"]))
         out.append({**g, "mv": round(g["mv"], 2), "today": round(g["today"], 2), "pl": round(g["pl"], 2),
                     "cost": round(cost, 2), "pct": None if pct is None else round(pct, 1),
-                    "hot": pct is not None and pct <= HOT_PCT, "und_chg": None if chg is None else round(chg, 2)})
+                    "hot": pct is not None and pct <= HOT_PCT, "mixed": mixed,
+                    "und_chg": None if chg is None else round(chg, 2)})
     out.sort(key=lambda g: (0 if g["has_opt"] else (1 if g["legs"] else 2), -g["mv"]))
     big = max((abs(g["today"]) for g in out), default=0) or 1
     for g in out:

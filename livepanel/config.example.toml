@@ -8,6 +8,13 @@ host = "127.0.0.1"
 port = 11111
 paper = false               # true = the moomoo simulate account
 include_futures = true      # add a universal account's futures sub-account to its equity
+# Several moomoo logins: one OpenD per login, each on its own port. Settings a login leaves out come from above.
+# [[moomoo.logins]]
+# label = "Main"
+# port = 11111
+# [[moomoo.logins]]
+# label = "Acct2"
+# port = 11112
 
 [ibkr]                      # needs TWS / IB Gateway running and logged in, and: pip install ib_async
 host = "127.0.0.1"
@@ -42,3 +49,4 @@ allow_extended_hours = false  # stocks only; options never trade outside 09:30â€
 mode = "app"                # "app" or "tab" (a normal browser tab)
 width = 320                 # first-open size; after that it reopens where and how big you left it (Windows)
 height = 420
+tray = true                 # Windows: icon by the clock â€” open the window, start with Windows, quit

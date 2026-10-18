@@ -1,11 +1,15 @@
 """moomoo / Futu via OpenD (pip install moomoo-api).
 
 The user runs OpenD and logs in there; this adapter only talks to OpenD on localhost and never sees
-a password. Live trading on the GUI OpenD has to be unlocked by hand in the OpenD window.
+its login password. Live trading needs the login unlocked: the GUI OpenD's Unlock button, or unlock() with the
+trade password (sent as an MD5, see unlock).
 
 Accounts are discovered, not configured: every SecurityFirm is asked for its account list and the
 REAL accounts that belong to it are kept (paper mode keeps the US stock+option simulate account).
 Each account gets a public key like "SG-1234"; the full account number never leaves this module.
+
+One OpenD serves one moomoo login. Several logins in one panel = several OpenD processes on different
+api_ports, one MoomooBroker each, with a label so keys stay apart: "Main·SG-1234", "Wife·SG-5678".
 """
 from __future__ import annotations
 
@@ -23,6 +27,22 @@ from .base import Broker, BrokerError
 OPT_RE = re.compile(r"^US\.([A-Z.]+?)(\d{2})(\d{2})(\d{2})([CP])(\d+)$")
 FIRM_SHORT = {"FUTUSG": "SG", "FUTUMY": "MY", "FUTUINC": "US", "FUTUSECURITIES": "HK",
               "FUTUAU": "AU", "FUTUCA": "CA", "FUTUJP": "JP"}
+
+
+def closable(can_sell, qty) -> float | None:
+    """How many contracts / shares can be closed now. moomoo reports a short position's buy-to-close amount as a
+    NEGATIVE can_sell_qty (a sold put x2 -> -2); taken as-is, the exit treated it as nothing to close and
+    skipped the leg without a word. Always a non-negative count, never more than the position."""
+    if can_sell is None:
+        return None
+    return min(abs(can_sell), abs(qty or 0))
+
+
+def acc_key(label: str | None, firm_short: str, acc_id) -> str:
+    """Public account key: "SG-1234", or "Main·SG-1234" when the panel has several moomoo logins.
+    The page shows the part before the first "-" as the account's name ("SG" / "Main·SG")."""
+    k = f"{firm_short}-{str(acc_id)[-4:]}"
+    return f"{label}·{k}" if label else k
 _DONE = {"FILLED_ALL": "filled", "CANCELLED_ALL": "cancelled", "CANCELLED_PART": "cancelled",
          "FAILED": "rejected", "SUBMIT_FAILED": "rejected", "DELETED": "cancelled", "DISABLED": "cancelled"}
 
@@ -72,8 +92,11 @@ class MoomooBroker(Broker):
     rate_limits = {"place": (13, 30.0), "modify": (18, 30.0)}
 
     def __init__(self, host: str = "127.0.0.1", port: int = 11111, paper: bool = False,
-                 include_futures: bool = True, cache_dir: Path | None = None):
+                 include_futures: bool = True, cache_dir: Path | None = None, label: str | None = None):
         self.host, self.port, self.paper, self.include_futures = host, port, paper, include_futures
+        self.label = label
+        if label:
+            self.name = f"moomoo·{label}"         # Composite keeps errors per name: several logins need distinct names
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.acc: dict[str, tuple] = {}          # public key -> (trade ctx, acc_id, firm name)
         self._ctx: list = []
@@ -88,6 +111,14 @@ class MoomooBroker(Broker):
         except ImportError as e:
             raise BrokerError("moomoo-api is not installed: pip install moomoo-api") from e
         self.m = m
+        # moomoo's context retries a refused connection forever, so a closed OpenD would hang here — and with it
+        # the whole panel (10-19: the second login's OpenD was closed and the panel never came up). Ask first.
+        import socket
+        try:
+            with socket.create_connection((self.host, self.port), timeout=3):
+                pass
+        except OSError:
+            raise BrokerError(f"OpenD not reachable at {self.host}:{self.port} — start that OpenD and log in") from None
         with self._lock:
             self.q = m.OpenQuoteContext(host=self.host, port=self.port)
             ret, st = self.q.get_global_state()
@@ -119,7 +150,7 @@ class MoomooBroker(Broker):
                 if keep:
                     self._ctx.append(tc)
                     for aid in keep:
-                        self.acc[f"{'PAPER' if self.paper else FIRM_SHORT[fname]}-{str(aid)[-4:]}"] = (tc, aid, fname)
+                        self.acc[acc_key(self.label, "PAPER" if self.paper else FIRM_SHORT[fname], aid)] = (tc, aid, fname)
                 else:
                     tc.close()
             if not self.acc:
@@ -203,7 +234,7 @@ class MoomooBroker(Broker):
                         account_id=key, instrument=inst, qty=qty,
                         avg_price=_f(getattr(r, "average_cost", None)), price=_f(r.nominal_price),
                         market_value=_f(r.market_val), unrealized_pnl=_f(r.pl_val),
-                        today_pnl=_f(r.today_pl_val), closable_qty=_f(r.can_sell_qty)))
+                        today_pnl=_f(r.today_pl_val), closable_qty=closable(_f(r.can_sell_qty), qty)))
         return out
 
     def quotes(self, instruments: list[Instrument]) -> dict[str, Quote]:
@@ -276,7 +307,11 @@ class MoomooBroker(Broker):
 
     # ── cash flows (cached per account per clearing day; past days never change) ──
     def _cache_path(self) -> Path | None:
-        return self.cache_dir / "moomoo_cashflow_cache.json" if self.cache_dir else None
+        if not self.cache_dir:
+            return None
+        # one file per login: several brokers writing one file would overwrite each other
+        tail = "_" + re.sub(r"\W+", "_", self.label) if self.label else ""
+        return self.cache_dir / f"moomoo_cashflow_cache{tail}.json"
 
     def _load_cache(self) -> dict:
         p = self._cache_path()
@@ -345,6 +380,26 @@ class MoomooBroker(Broker):
         return out
 
     # ── trading ──────────────────────────────────────────────────────────
+    @property
+    def needs_unlock(self) -> bool:
+        return not self.paper                              # simulate accounts trade without unlocking
+
+    def unlock(self, password: str) -> None:
+        """moomoo unlocks per security firm (SG, MY …): one call for each firm this login has accounts at.
+        The SDK keeps whatever it is given for the life of the process (it re-unlocks after a reconnect), so it is
+        given only the MD5 that OpenD wants anyway — never the password itself. Nothing is written to disk."""
+        if self.paper:
+            return
+        if not self._ctx:
+            raise BrokerError("not connected to OpenD")
+        import hashlib
+        m, md5 = self.m, hashlib.md5(password.encode("utf-8")).hexdigest()
+        for tc in list(self._ctx):
+            with self._lock:
+                ret, d = tc.unlock_trade(password_md5=md5)
+            if ret != m.RET_OK:
+                raise BrokerError(scrub(d))
+
     def _tc(self, account_id: str):
         if account_id not in self.acc:
             raise BrokerError(f"unknown account {account_id}")

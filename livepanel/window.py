@@ -186,21 +186,101 @@ def _win() -> _Win:
     return _W
 
 
+def _desktop() -> Path:
+    """The real Desktop folder: often moved into OneDrive, so ~/Desktop can be the wrong place."""
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                            "[Environment]::GetFolderPath('Desktop')"], capture_output=True, text=True, timeout=20)
+        p = Path(r.stdout.strip())
+        if r.returncode == 0 and r.stdout.strip() and p.is_dir():
+            return p
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return Path(os.path.expanduser("~")) / "Desktop"
+
+
+def launch_command(config: Path | None = None) -> tuple[str, str, str, str]:
+    """(program, arguments, working dir, icon) that open the panel window without a console.
+    Used by the desktop shortcut and by "Start with Windows"."""
+    cfg_arg = f' --config "{config}"' if config else ""
+    if getattr(sys, "frozen", False):                       # LivePanel.exe: point at the .exe itself
+        exe = Path(sys.executable)
+        return str(exe), "--window" + cfg_arg, str(exe.parent), str(exe)
+    pyw = Path(sys.executable).with_name("pythonw.exe")
+    exe = pyw if pyw.exists() else Path(sys.executable)
+    src = Path(__file__).resolve().parent.parent            # running from a source checkout (not pip-installed)?
+    wd = src if (src / "pyproject.toml").exists() else Path.home()
+    return str(exe), "-m livepanel --window" + cfg_arg, str(wd), str(Path(__file__).resolve().parent / "web" / "icon.ico")
+
+
+def write_shortcut(lnk: Path, config: Path | None = None) -> Path:
+    exe, args, wd, icon = launch_command(config)
+    ps = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LP_LNK);"
+          "$s.TargetPath=$env:LP_EXE;$s.Arguments=$env:LP_ARGS;$s.WorkingDirectory=$env:LP_WD;"
+          "if (Test-Path $env:LP_ICO) { $s.IconLocation=$env:LP_ICO };"
+          "$s.Description='Live Panel';$s.Save()")
+    env = {**os.environ, "LP_LNK": str(lnk), "LP_EXE": exe, "LP_ARGS": args, "LP_WD": wd, "LP_ICO": icon}
+    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], env=env, check=True,
+                   capture_output=True, timeout=30)
+    return lnk
+
+
 def make_shortcut(target_dir: Path | None = None, config: Path | None = None) -> Path:
     """Desktop shortcut that starts the panel without a console window. Windows only for now."""
     if sys.platform != "win32":
         raise RuntimeError("shortcut creation is Windows-only; on macOS/Linux run `livepanel --window` from a launcher")
-    target_dir = Path(target_dir or Path(os.path.expanduser("~")) / "Desktop")
-    pyw = Path(sys.executable).with_name("pythonw.exe")
-    exe = pyw if pyw.exists() else Path(sys.executable)
-    args = "-m livepanel --window" + (f' --config "{config}"' if config else "")
-    lnk = target_dir / "Live Panel.lnk"
-    ps = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LP_LNK);"
-          "$s.TargetPath=$env:LP_EXE;$s.Arguments=$env:LP_ARGS;$s.WorkingDirectory=$env:LP_WD;"
-          "$s.Description='Live Panel';$s.Save()")
-    src = Path(__file__).resolve().parent.parent            # running from a source checkout (not pip-installed)?
-    wd = src if (src / "pyproject.toml").exists() else Path.home()
-    env = {**os.environ, "LP_LNK": str(lnk), "LP_EXE": str(exe), "LP_ARGS": args, "LP_WD": str(wd)}
-    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], env=env, check=True,
-                   capture_output=True)
-    return lnk
+    return write_shortcut(Path(target_dir or _desktop()) / "Live Panel.lnk", config)
+
+
+def show_existing() -> bool:
+    """Bring the open panel window back to the front, un-minimizing it. False when no panel window is open.
+    (A minimized window looks like the panel is gone: 10-15 it sat minimized for hours.)"""
+    if sys.platform != "win32":
+        return False
+    h = _win().find(TITLE, timeout=0)
+    if not h:
+        return False
+    import ctypes
+    u = ctypes.windll.user32
+    if u.IsIconic(h):
+        u.ShowWindow(h, 9)                                  # SW_RESTORE: back to its last normal place
+    flags = 0x0001 | 0x0002                                 # NOSIZE | NOMOVE
+    u.SetWindowPos(h, ctypes.c_void_p(-1), 0, 0, 0, 0, flags)   # topmost then back: lands on top even when
+    u.SetWindowPos(h, ctypes.c_void_p(-2), 0, 0, 0, 0, flags)   # Windows refuses the foreground switch
+    u.SetForegroundWindow(h)
+    return True
+
+
+def close_windows() -> int:
+    """Close every open panel window (used by Quit in the tray)."""
+    if sys.platform != "win32":
+        return 0
+    import ctypes
+    n = 0
+    while n < 10:
+        h = _win().find(TITLE, timeout=0)
+        if not h:
+            break
+        ctypes.windll.user32.PostMessageW(h, 0x0010, 0, 0)      # WM_CLOSE
+        n += 1
+        import time
+        time.sleep(0.3)
+    return n
+
+
+def startup_shortcut() -> Path:
+    """The "Start with Windows" shortcut: Live Panel.lnk in the user's Startup folder."""
+    r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", "[Environment]::GetFolderPath('Startup')"],
+                       capture_output=True, text=True, timeout=20)
+    d = Path(r.stdout.strip())
+    if r.returncode != 0 or not r.stdout.strip() or not d.is_dir():
+        raise RuntimeError("can't find the Startup folder")
+    return d / "Live Panel.lnk"
+
+
+def shortcut_config(path):
+    """--config for a shortcut: only when the config isn't the default ~/.livepanel/config.toml."""
+    if not path:
+        return None
+    from .config import HOME
+    return None if Path(path).resolve() == (HOME / "config.toml").resolve() else path
