@@ -13,7 +13,8 @@ from pathlib import Path
 WEB = Path(__file__).parent / "web"
 
 
-def serve(panel, liquidator, cfg, port: int, cfg_path: Path | None = None, restart=None, first_run: bool = False):
+def serve(panel, liquidator, cfg, port: int, cfg_path: Path | None = None, restart=None, first_run: bool = False,
+          updates=None):
     """cfg_path + restart turn on the settings page: it reads and writes cfg_path, then calls restart()."""
     token = secrets.token_urlsafe(18)
     run_id = secrets.token_hex(4)                       # changes on every start: an open page reloads after a restart
@@ -22,7 +23,11 @@ def serve(panel, liquidator, cfg, port: int, cfg_path: Path | None = None, resta
     exit_cmd = cfg.get("trading", "exit_command")
     page_cfg = {"lang": cfg.get("panel", "lang"), "trading": cfg.trading_enabled, "dry_run": cfg.dry_run,
                 "token": token, "exit_command": bool(exit_cmd), "run_id": run_id,
-                "settings": bool(cfg_path and restart), "first_run": first_run}
+                "settings": bool(cfg_path and restart), "first_run": first_run,
+                # what the confirm text says the engine does: the running engine's own numbers, not the file's
+                "start_frac": liquidator.start_frac if liquidator else cfg.ladder[0],
+                "step_sec": liquidator.step_sec if liquidator else cfg.ladder[1],
+                "mode": liquidator.mode if liquidator else None}
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a):
@@ -55,6 +60,7 @@ def serve(panel, liquidator, cfg, port: int, cfg_path: Path | None = None, resta
             if path == "/api/state":
                 return self._json(200, {**panel.view(), "ui_ver": _ui_ver(), "run_id": run_id,
                                         "logins": panel.b.logins() if hasattr(panel.b, "logins") else [],
+                                        "update": updates.latest if updates else None,
                                         "unlocked": unlocked,
                                         "jobs": liquidator.view() if liquidator else [],
                                         "trading": {"enabled": cfg.trading_enabled, "dry_run": cfg.dry_run}})
@@ -92,6 +98,10 @@ def serve(panel, liquidator, cfg, port: int, cfg_path: Path | None = None, resta
                 except ValueError as e:
                     return self._json(409, {"error": str(e)})
                 return self._json(200, {"job": job.id})
+            if self.path == "/api/exit_preview":
+                if not (cfg.trading_enabled and liquidator):
+                    return self._json(403, {"error": "trading is disabled in config"})
+                return self._json(200, {"rows": liquidator.preview(panel.positions)})
             if self.path == "/api/exit_command":
                 if not exit_cmd:
                     return self._json(403, {"error": "no exit_command configured"})
@@ -167,6 +177,73 @@ class _Server(ThreadingHTTPServer):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
+
+
+def view_key(data_dir: Path) -> str:
+    """The phone link's key. Kept on disk so a saved link survives restarts; delete the file to cancel every link."""
+    p = Path(data_dir) / "view_key"
+    try:
+        k = p.read_text(encoding="utf-8").strip()
+        if len(k) >= 20:
+            return k
+    except OSError:
+        pass
+    k = secrets.token_urlsafe(24)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(k, encoding="utf-8")
+    return k
+
+
+def serve_view(panel, cfg, host: str, port: int, key: str):
+    """A read-only copy of the page for a phone ([phone] in the config, off by default).
+
+    It has no order, unlock, settings or restart endpoints at all, so nothing reachable through it can trade.
+    Every request needs the key in the link (?k=...). It binds where the config says: 127.0.0.1 for a tunnel
+    (ngrok) on this computer, or this computer's Tailscale / home-network address."""
+    page_cfg = {"lang": cfg.get("panel", "lang"), "trading": False, "dry_run": False, "token": "",
+                "exit_command": False, "settings": False, "view_only": True,
+                "poll_ms": max(5, int(cfg.get("phone", "poll_sec"))) * 1000}
+
+    class V(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _send(self, code: int, body: bytes, ctype: str = "application/json; charset=utf-8"):
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")           # the key is in the URL
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            from urllib.parse import parse_qs, urlsplit
+            u = urlsplit(self.path)
+            k = parse_qs(u.query).get("k", [""])[0]
+            if not (k and secrets.compare_digest(k.encode(), key.encode())):
+                return self._send(403, "this link needs its key / 链接缺钥匙".encode("utf-8"), "text/plain; charset=utf-8")
+            if u.path in ("/", "/index.html"):
+                return self._send(200, _page(page_cfg), "text/html; charset=utf-8")
+            if u.path == "/api/state":
+                v = {k2: v2 for k2, v2 in panel.view().items() if k2 not in ("jobs",)}
+                body = {**v, "ui_ver": _ui_ver(), "jobs": [], "logins": [], "trading": {"enabled": False, "dry_run": False}}
+                return self._send(200, json.dumps(body, ensure_ascii=False, default=str).encode("utf-8"))
+            return self._send(404, b'{"error": "not found"}')
+
+        def do_POST(self):
+            self._send(405, b'{"error": "view only"}')
+
+        do_PUT = do_DELETE = do_PATCH = do_POST
+
+    return _Server((host, port), V)
+
+
+def _page(page_cfg: dict) -> bytes:
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    html = html.replace("/*__CFG__*/{}", json.dumps({**page_cfg, "ui_ver": _ui_ver()}))
+    html = html.replace('<html lang="en">', f'<html lang="{"zh-CN" if page_cfg["lang"] == "zh" else "en"}">', 1)
+    return html.encode("utf-8")
 
 
 def _ui_ver() -> int:

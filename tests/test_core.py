@@ -126,3 +126,10 @@ def test_closes_ignore_rows_after_the_grace_window(tmp_path):
     s.record(datetime(2026, 11, 27, 13, 10, tzinfo=NY), 1.0)          # early-close day: 13:00 + 15 min
     s.record(datetime(2026, 11, 27, 13, 20, tzinfo=NY), 2.0)
     assert s.closes() == {"2026-09-25": 40_000.00, "2026-11-27": 1.0}
+
+
+def test_the_first_price_follows_the_configured_fraction():
+    assert start_price(Side.SELL, 3.05, 3.70, 0.05, 0.5) == 3.35       # 3.375 -> down to 3.35
+    assert start_price(Side.BUY, 3.05, 3.70, 0.05, 0.5) == 3.40        # 3.375 -> up to 3.40
+    assert start_price(Side.SELL, 3.05, 3.70, 0.05, 0.0) == 3.05       # 0%: straight to the bid
+    assert start_price(Side.BUY, 3.05, 3.70, 0.05, 0.0) == 3.70        # buying back: straight to the ask

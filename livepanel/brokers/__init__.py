@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 
 from ..models import Instrument
 from .base import Broker, BrokerError
@@ -18,6 +18,7 @@ class Composite(Broker):
         self._acc: dict[str, Broker] = {}
         self._inst: dict[str, Broker] = {}
         self.errors: dict[str, str] = {}
+        self._last_pos: dict[str, tuple[list, datetime]] = {}      # broker name -> last positions it reported, when
 
     def connect(self) -> None:
         for b in self.brokers:
@@ -91,8 +92,14 @@ class Composite(Broker):
             for p in ps:
                 self._acc[p.account_id] = b
                 self._inst[p.instrument.key] = b
+            self._last_pos[b.name] = (ps, datetime.now(timezone.utc))
             out.extend(ps)
         return out
+
+    def offline_positions(self) -> dict[str, tuple[list, datetime]]:
+        """{broker name: (positions it last reported, when)} for brokers that are disconnected now. Shown greyed:
+        a login that drops out must not look like its positions were closed. Never traded on."""
+        return {n: v for n, v in self._last_pos.items() if n in self.errors}
 
     def quotes(self, instruments: list[Instrument]):
         out, by = {}, {}
@@ -159,6 +166,25 @@ class Composite(Broker):
 _BAD_LABEL = re.compile(r"[-|·\s]")
 
 
+_OPEND_NAME = re.compile(r"(?i).*opend.*\.exe")         # OpenD.exe, moomoo_OpenD.exe, FutuOpenD.exe
+
+
+def _is_opend(path: str) -> bool:
+    from pathlib import PureWindowsPath
+    return bool(_OPEND_NAME.fullmatch(PureWindowsPath(path).name))   # the file that would run, not a folder name
+
+
+def _opend_path(v, who) -> str | None:
+    """Where this login's OpenD program is, so the panel can start it when it isn't running. Only an OpenD
+    executable is accepted: the settings page can write this value, and it must not become "run any program"."""
+    if not v:
+        return None
+    p = str(v).strip().strip('"')
+    if not _is_opend(p):
+        raise ValueError(f"moomoo login {who!r}: opend must point to the OpenD program (…OpenD.exe), not {p!r}")
+    return p
+
+
 def moomoo_logins(cfg) -> list[dict]:
     """One OpenD serves one moomoo login. For several logins, list them as [[moomoo.logins]] tables, each with
     a label and its own OpenD api_port; fields a login leaves out come from [moomoo]. No list = one login, no label.
@@ -169,7 +195,8 @@ def moomoo_logins(cfg) -> list[dict]:
     raw = cfg.get("moomoo", "logins")
     if not raw:
         return [{"host": str(base["host"]), "port": int(base["port"]), "paper": bool(base["paper"]),
-                 "include_futures": bool(base["include_futures"]), "label": None, "since": None}]
+                 "include_futures": bool(base["include_futures"]), "label": None, "since": None,
+                 "opend": _opend_path(cfg.get("moomoo", "opend"), "moomoo")}]
     if not isinstance(raw, list) or not all(isinstance(x, dict) for x in raw):
         raise ValueError("moomoo logins must be [[moomoo.logins]] tables")
     out, labels, ports = [], set(), set()
@@ -195,7 +222,7 @@ def moomoo_logins(cfg) -> list[dict]:
         ports.add((host, port))
         out.append({"host": host, "port": port, "paper": bool(lg.get("paper", base["paper"])),
                     "include_futures": bool(lg.get("include_futures", base["include_futures"])), "label": label,
-                    "since": since})
+                    "since": since, "opend": _opend_path(lg.get("opend"), label)})
     return out
 
 

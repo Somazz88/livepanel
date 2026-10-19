@@ -259,3 +259,66 @@ def test_unlock_gives_moomoo_only_the_md5():
     b.m, b._ctx = types.SimpleNamespace(RET_OK=0), [TC(), TC()]                      # two security firms
     b.unlock("hunter22")
     assert seen == [{"password_md5": hashlib.md5(b"hunter22").hexdigest()}] * 2     # the password itself never passed
+
+
+def test_update_check_only_announces_a_newer_full_release():
+    from livepanel.updates import newer
+    rel = lambda tag, pre=False: (lambda: {"tag_name": tag, "html_url": f"https://github.com/x/y/releases/tag/{tag}", "prerelease": pre})
+    assert newer("0.4.0", rel("v0.5.0")) == {"version": "0.5.0", "url": "https://github.com/x/y/releases/tag/v0.5.0"}
+    assert newer("0.4.0", rel("v0.4.0")) is None and newer("0.4.0", rel("v0.3.9")) is None
+    assert newer("0.4.0", rel("v0.10.0")) is not None                     # numbers, not text: 0.10 > 0.4
+    assert newer("0.4.0", rel("v0.5.0", pre=True)) is None
+    def boom():
+        raise OSError("offline")
+    assert newer("0.4.0", boom) is None                                   # no network: quietly nothing
+
+
+def test_phone_view_is_read_only_and_needs_its_key(tmp_path):
+    from livepanel.server import serve_view, view_key
+    c = Config({"brokers": {"use": ["demo"]}, "panel": {"data_dir": str(tmp_path)},
+                "trading": {"enabled": True, "dry_run": True}})
+    b = brokers.make(c)
+    b.connect()
+    p = Panel(b, c)
+    p.tick(now=datetime(2026, 10, 2, 10, 0, tzinfo=__import__("zoneinfo").ZoneInfo("America/New_York")))
+    key = view_key(tmp_path)
+    assert view_key(tmp_path) == key and len(key) >= 20                     # the same link survives restarts
+    port = _free_port()
+    srv = serve_view(p, c, "127.0.0.1", port, key)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+
+    def req(method, path, host="phone.example:443"):
+        con = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        con.request(method, path, body="{}" if method == "POST" else None, headers={"Host": host})
+        r = con.getresponse()
+        return r.status, r.read().decode("utf-8")
+    try:
+        assert req("GET", "/")[0] == 403 and req("GET", "/?k=wrong")[0] == 403 and req("GET", "/api/state")[0] == 403
+        code, html = req("GET", f"/?k={key}")
+        cfg_js = json.loads(html.split("const CFG = ", 1)[1].split(";", 1)[0])
+        assert code == 200 and cfg_js["view_only"] and cfg_js["token"] == "" and not cfg_js["trading"] and not cfg_js["settings"]
+        code, st = req("GET", f"/api/state?k={key}")
+        s = json.loads(st)
+        assert code == 200 and s["positions"] and s["jobs"] == [] and s["logins"] == []
+        for path in ("/api/exit", "/api/unlock", "/api/config", "/api/restart", f"/api/exit?k={key}"):
+            assert req("POST", path)[0] == 405                              # nothing on this server can act
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_the_exit_ladder_is_set_from_the_page_and_checked():
+    f = form()
+    f["trading"] = {"start_pct": 70, "step_sec": 10}
+    assert "start_frac" not in settings.apply(RAW, f)["trading"]            # the defaults: file left alone
+    f["trading"] = {"start_pct": 50, "step_sec": 5, "enabled": True, "dry_run": False}
+    out = settings.apply(RAW, f)
+    assert out["trading"]["start_frac"] == 0.5 and out["trading"]["step_sec"] == 5
+    assert out["trading"]["dry_run"] is True                                # on/off still file-only
+    assert Config(out).ladder == (0.5, 5)
+    for bad, msg in (({"start_pct": 120, "step_sec": 10}, "0–100"), ({"start_pct": 70, "step_sec": 1}, "3–60")):
+        f["trading"] = bad
+        with pytest.raises(ValueError, match=msg):
+            settings.apply(RAW, f)
+    assert Config({"trading": {"start_frac": 7, "step_sec": "x"}}).ladder == (0.70, 10)   # a bad file can't stop the start
+    assert settings.form_from(Config(out))["trading"]["start_pct"] == 50

@@ -42,7 +42,9 @@ tr.sub td.l{white-space:normal;overflow-wrap:anywhere}
 tr.grp input[type=checkbox]{margin-right:4px}
 tr.sub td.l{padding-left:24px}
 tr.sub b{display:inline-block;min-width:26px;color:var(--mut);font-weight:600;font-size:12px;margin-right:5px}
-.pc{display:inline-block;min-width:40px}.pc.hot{background:var(--dn);color:#fff;border-radius:4px;padding:0 4px;font-weight:600}
+.pc{display:inline-block}.pp{margin-left:4px}.pp.hot{background:var(--dn);color:#fff;border-radius:4px;padding:0 4px;font-weight:600}
+.pill.stale{border-style:dashed}tr.sub.stale td,tr.grp.stale td{opacity:.62}.dte{color:var(--warn);font-weight:600}.chg.warn{color:var(--warn);font-weight:600}
+.dsum .r3{font-size:11px;color:var(--mut);margin-top:1px}
 .ft{color:var(--mut);font-size:12px;margin:6px 2px 0}.ft b{color:var(--fg)}
 .deals{margin-top:10px}
 .bar{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center}
@@ -71,19 +73,32 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
   .eq{margin:2px 0 4px;font-size:9.5px;gap:5px}.eq svg{height:20px}
   .tbl{border-radius:6px}th{font-size:10px;padding:2px 5px}td{padding:3px 5px}tr.sub td{font-size:11px;padding:2px 5px}
   tr.sub td.l{padding-left:14px}tr.sub b{min-width:22px;font-size:10px}.chg{font-size:10.5px;margin-left:3px}.car{width:10px;font-size:8px}
-  .pc{min-width:30px}.ft{font-size:10.5px;margin:3px 2px 0}.deals{margin-top:6px}
+  .pp{margin-left:3px}.ft{font-size:10.5px;margin:3px 2px 0}.deals{margin-top:6px}
   #exitCmd{right:8px;bottom:6px;padding:2px 12px;font-size:12px}.errs{font-size:11px;margin:3px 0}
   .deals tr.grp td{font-size:11px;color:var(--mut)}}
 /* settings page */
-#set,#unl{position:fixed;inset:0;background:var(--bg);padding:14px 16px;overflow-y:auto;overflow-x:hidden;z-index:30}
+#set,#unl,#xp{position:fixed;inset:0;background:var(--bg);padding:14px 16px;overflow-y:auto;overflow-x:hidden;z-index:30}
 #set small{overflow-wrap:anywhere}
-#set .hd,#unl .hd{display:flex;justify-content:space-between;align-items:center}
+#set .hd,#unl .hd,#xp .hd{display:flex;justify-content:space-between;align-items:center}
+.xmode{margin:8px 0 4px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;color:#fff;background:#2e343b}
+.xmode.real{background:#7a1c15}
+.xsec h4{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-size:13px}
+.xsec h4 label{font-weight:400;font-size:12px;color:var(--mut);cursor:pointer}
+.xbox{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.xg{display:block;padding:6px 10px;font-weight:600;border-top:1px solid var(--line);cursor:pointer}
+.xbox>:first-child{border-top:0}
+.xr{display:block;padding:5px 10px 5px 26px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
+.xr.on{background:rgba(74,157,255,.17)}.xr.off{opacity:.5;cursor:default}
+.xr b{color:var(--mut);font-size:12px;margin-right:4px}.xr .q{font-size:12px;color:var(--mut);margin-left:22px}.xr .q b{color:var(--fg)}
+.xsum{margin:10px 2px 0;font-weight:600;font-variant-numeric:tabular-nums}
+#xp .bar button{background:#2f3843;color:#fff;border-color:#2f3843}#xp .bar button:disabled{background:var(--card);color:var(--mut);border-color:var(--line)}
+@media (max-width:420px){#xp{padding:8px 10px}.xr{font-size:11.5px;padding:4px 8px 4px 18px}.xr .q{font-size:10.5px;margin-left:18px}.xg{padding:5px 8px}}
 .fs{margin:10px 0;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .fs h4{margin:0 0 6px;font-size:13px}.sub2{margin:6px 0 0;padding-top:6px;border-top:1px dashed var(--line)}
 .row{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}.row>label:first-child:not(.ck){min-width:70px;color:var(--mut);font-size:12px}
 label.ck{display:inline-flex;align-items:center;margin-right:10px;cursor:pointer}
 #unl input[type=password],#set input[type=text],#set input[type=number],#set select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
-#set input.lbl{width:100px}#set input.port{width:84px}
+#set input.lbl{width:100px}#set input.port{width:84px}#set input.od{flex:1 1 100%;min-width:0;font-size:12px}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
 .res div{font-size:12px;margin:3px 0}.res .ok{color:var(--up)}.res .bad{color:var(--dn)}
 @media (max-width:420px){#set{padding:8px 10px}.fs{padding:8px}.row>label:first-child:not(.ck){min-width:54px}#set input.lbl{width:84px}#set input.port{width:70px}#gear,#unlk{padding:1px 7px;font-size:11px;border-radius:6px}}
@@ -97,8 +112,9 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
   <header>
     <span id="status" class="pill">…</span>
     <span id="mode" class="pill" hidden></span>
+    <a id="upd" class="pill live" hidden target="_blank" rel="noopener noreferrer"></a>
     <span style="flex:1"></span>
-    <button id="unlk" hidden>🔓</button>
+    <button id="unlk" hidden>🔒</button>
     <button id="gear" hidden>⚙</button>
     <button id="refresh"></button>
   </header>
@@ -106,9 +122,7 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
   <section class="sum" id="sum"></section>
   <div class="eq" id="eq" hidden></div>
   <div class="bar" id="tradebar" hidden>
-    <button id="exitSel" class="danger" disabled></button>
-    <button id="exitAll"></button>
-    <small id="tradeNote"></small>
+    <button id="xOpen"></button>
   </div>
   <div class="tbl"><table id="pos"></table></div>
   <div class="ft" id="foot"></div>
@@ -127,6 +141,17 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
   <div class="hd"><b id="unlTitle"></b><button id="unlX">✕</button></div>
   <div id="unlBody"></div>
 </div>
+<div id="xp" hidden>
+  <div class="hd"><b id="xpTitle"></b><button id="xpX">✕</button></div>
+  <div id="xpMode" class="xmode"></div>
+  <div id="xpOff" class="errs"></div>
+  <div id="xpBody"></div>
+  <div id="xpSum" class="xsum"></div>
+  <div class="bar"><button id="xpRef"></button><small id="xpAt" class="mut"></small><span style="flex:1"></span>
+    <button id="xpAll"></button><button id="xpGo" disabled></button><button id="xpStop" disabled></button></div>
+  <small id="xpNote"></small>
+  <section id="xpJobs"></section>
+</div>
 <div id="set" hidden>
   <div class="hd"><b id="setTitle"></b><button id="setX">✕</button></div>
   <div id="setBody"></div>
@@ -137,14 +162,18 @@ const T = {
  en:{refresh:"Refresh",equity:"Equity",today:"Today",week:"This week",month:"This month",live:"live",frozen:"closing marks · ",after:"after-hours pull · ",
    since:"since close",nodeposit:"excludes deposits (broker can't report them)",missing:"legs without broker P&L",
    notyet:"not enough history yet",loading:"loading deposits…",now:"now",
-   head:["Symbol · stock today","Value","Today","P&L"],dte:"DTE",cost:"cost",stock:"stock",closedToday:"closed today",
-   footMv:"Positions",expiry:"expiry",deals:"Recent fills",todayN:n=>`today ${n}`,buy:"Buy",sell:"Sell",
-   shortTag:"seller",longTag:"buyer",soldAt:"sold at",close:{SELL:"sell to close",BUY:"buy back to close"},
-   exitSel:"Exit selected",exitAll:"Exit all",exitCmd:"Exit",exitCmdOld:"Old exit tool · LIVE",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",dryShort:"Rehearsal · no orders",modes:{dry:"rehearsal",real:"LIVE",paper:"paper",test:"test"},placed:n=>`placed ${n}`,
-   confirm:(n,m,list)=>`Exit ${n} position(s)?\n\n${list}\n\nMode: ${m}\nLimit orders only: start at bid + 70% of spread (ask − 70% when buying back), one tick toward it every 10 s, never past it.`,
+   head:["Symbol · stock today","Value","Today","Open P&L"],dte:"DTE",cost:"cost",stock:"stock",closedToday:"closed today",
+   footMv:"Positions",expiry:"expiry",deals:"Fills · last 3 days",nowPx:"now",shortStock:"short",expToday:"expires today",
+   dteWarn:n=>`⚠${n}d`,dteTip:n=>`a leg expires in ${n} day(s)`,partial:"needs every login connected",offline:t=>`offline · last seen ${t}`,offTag:"offline",
+   missingAcct:n=>`${n} offline — not counted`,split:{opt:"options",stk:"stock"},
+   legWarn:"⚠ Each leg is its own order: one leg of a spread can fill before the other.",offlineConfirm:n=>`⚠ ${n} is offline — not in this exit`,
+   simFilled:"🧪 simulated fill",simPlaced:n=>`simulated ${n} — nothing was sent to the broker`,simJob:"rehearsal · nothing sent",todayN:n=>`today ${n}`,buy:"Buy",sell:"Sell",
+   shortTag:"short",longTag:"long",soldAt:"sold at",close:{SELL:"sell to close",BUY:"buy to close"},
+   exitCmd:"Exit",exitCmdOld:"Old exit tool · LIVE",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",dryShort:"Rehearsal",update:v=>`v${v} available`,stillLive:"orders already placed are still live at the broker — check there",modes:{dry:"rehearsal",real:"LIVE",paper:"paper",test:"test"},placed:n=>`placed ${n}`,
+   confirm:(n,m,list,p,s)=>`Exit these ${n}?\n\n${list}\n\nMode: ${m}\nLimit orders only: sell to close starts at bid + ${p}% of the bid/ask spread, buy to close at ask − ${p}%; one tick toward the bid (ask) every ${s} s, never past it.`,
    allClosed:"✅ All closed — positions re-read after the job",someLeft:"⚠️ Still held after the job:",checkUnknown:"Couldn't re-read positions — check the broker",
-   dryNote:"Rehearsal: real positions don't change",grpAll:"select every leg of this symbol",
-   note:"Options trade 09:30–16:00 ET only.",job:"Exit job",side:"Side",qty:"Qty",price:"Price",bidask:"Bid / Ask",state:"State",filled:"Filled",inst:"Instrument",
+   dryNote:"Rehearsal: real positions don't change",
+   note:"Options trade 09:30–16:00 ET only.",job:"Close-out",side:"Side",qty:"Qty",price:"Price",bidask:"Bid / Ask",state:"State",filled:"Filled",inst:"Instrument",
    chart:"Equity (deposits included)",daily:"Daily",intra:"Today",sparkHint:"Click for the daily / today chart",
    colDate:"Date",colTime:"Time (every 30 min)",colEq:"Equity",colChg:"Change",depIn:"deposit",depOut:"withdrawal",
    legend:"▲ deposit ▼ withdrawal",
@@ -156,14 +185,18 @@ const T = {
  zh:{refresh:"刷新",equity:"总资产",today:"今日",week:"本周",month:"本月",live:"实时",frozen:"收盘价 · ",after:"盘后拉取 · ",
    since:"自收盘",nodeposit:"未扣出入金(券商不提供)",missing:"条券商没给今日盈亏",
    notyet:"记录还不够",loading:"正在拉出入金…",now:"现在",
-   head:["标的 · 正股今天","市值","今日","持仓"],dte:"DTE",cost:"成本",stock:"正股",closedToday:"今天已平",
-   footMv:"持仓市值",expiry:"到期",deals:"📜 最近买卖",todayN:n=>`今天 ${n} 笔`,buy:"买",sell:"卖",
+   head:["标的 · 正股今天","市值","今日","持仓盈亏"],dte:"DTE",cost:"成本",stock:"正股",closedToday:"今天已平",
+   footMv:"持仓市值",expiry:"到期",deals:"📜 近 3 天买卖",nowPx:"现价",shortStock:"卖空",expToday:"今天到期",
+   dteWarn:n=>`⚠${n}天`,dteTip:n=>`有一条腿 ${n} 天后到期`,partial:"要全部账户连上才算",offline:t=>`未连线 · 最后看到 ${t}`,offTag:"未连线",
+   missingAcct:n=>`${n} 没连上，不在合计里`,split:{opt:"期权",stk:"正股"},
+   legWarn:"⚠ 每条腿是分开挂的单：价差可能一条腿先成交、另一条还没成交。",offlineConfirm:n=>`⚠ ${n} 没连上，不在这次平仓里`,
+   simFilled:"🧪 模拟成交",simPlaced:n=>`模拟挂 ${n} 条 —— 没送去券商`,simJob:"演练 · 没送单",todayN:n=>`今天 ${n} 笔`,buy:"买",sell:"卖",
    shortTag:"卖方",longTag:"买方",soldAt:"卖出价",close:{SELL:"卖出平仓",BUY:"买回平仓"},
-   exitSel:"清选中",exitAll:"全部清仓",exitCmd:"清仓",exitCmdOld:"旧工具清仓 · 真单",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",dryShort:"演练 · 不下单",modes:{dry:"演练",real:"真单",paper:"模拟盘",test:"测试"},placed:n=>`已挂 ${n} 条`,
-   confirm:(n,m,list)=>`清掉 ${n} 条腿？\n\n${list}\n\n模式：${m}\n只挂限价单：卖出平仓从买价 + 70% 价差开始、买回平仓从卖价 − 70% 价差开始，每 10 秒往对手价挪一格，永不越过。`,
+   exitCmd:"清仓",exitCmdOld:"旧工具清仓 · 真单",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",dryShort:"演练 · 不下单",update:v=>`有新版 ${v}`,stillLive:"已经挂出的单还在券商那边 —— 去券商确认",modes:{dry:"演练",real:"真单",paper:"模拟盘",test:"测试"},placed:n=>`已挂 ${n} 条`,
+   confirm:(n,m,list,p,s)=>`清掉以下 ${n} 条？\n\n${list}\n\n模式：${m}\n只挂限价单：卖出平仓从买一价 + 价差的 ${p}% 开始、买回平仓从卖一价 − ${p}% 开始，每 ${s} 秒往买一（卖一）挪一格，永不越过。`,
    allClosed:"✅ 全部平掉 —— 清完已重新读持仓确认",someLeft:"⚠️ 清完还剩：",checkUnknown:"清完读不到持仓 —— 去券商确认",
-   dryNote:"演练：真实持仓不会变",grpAll:"选这个标的的全部腿",
-   note:"期权只能在美东 09:30–16:00 交易。",job:"清仓任务",side:"方向",qty:"数量",price:"价格",bidask:"买 / 卖",state:"状态",filled:"成交",inst:"标的",
+   dryNote:"演练：真实持仓不会变",
+   note:"期权只能在美东 09:30–16:00 交易。",job:"平仓任务",side:"方向",qty:"数量",price:"价格",bidask:"买一 / 卖一",state:"状态",filled:"成交",inst:"标的",
    chart:"总资产走势(含出入金)",daily:"每日",intra:"今天",sparkHint:"点一下看每日 / 今天的走势",
    colDate:"日期",colTime:"时间(每 30 分)",colEq:"总资产",colChg:"变化",depIn:"入金",depOut:"出金",
    legend:"▲入金 ▼出金",
@@ -176,13 +209,42 @@ const T = {
 const L = T[CFG.lang] || T.en;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// ── broker / engine errors in plain words (the original stays in the tooltip) ──
+const HUMAN = {
+ zh: [[/not reachable at ([\d.]+:\d+)/i, () => "没连上 —— 它现在的持仓看不到，看不到≠已平。打开它的 OpenD（不是 moomoo app）登录，再按 ↻"],
+      [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "交易密码不对"],
+      [/unlock|解锁/i, () => "这个号还没解锁 —— 按 🔒 输入它的交易密码"],
+      [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "这个号没有这个市场的交易权限"],
+      [/insufficient|not enough|exceed|不足|超过/i, () => "数量或资金不够（可能已经有挂单占着）"],
+      [/trading hours|market (is )?closed|not (in )?trading|非交易时段|休市|不在交易时间/i, () => "现在不是它的交易时段"],
+      [/price|tick|价格|价位/i, () => "价格不合规（最小价位或涨跌幅）"],
+      [/disconnect|connection (lost|reset|refused)|ReadFail|断开|连接/i, () => "跟 OpenD 断线了 —— 看 OpenD 窗口还在不在"],
+      [/position query failed/i, () => "读持仓失败 —— OpenD 可能断线或还没登录好"]],
+ en: [[/not reachable at ([\d.]+:\d+)/i, () => "not connected — its positions now can't be seen, and not shown ≠ closed. Open its OpenD (not the moomoo app), log in, then press ↻"],
+      [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "Wrong trade password"],
+      [/unlock|解锁/i, () => "This login isn't unlocked — press 🔒 and enter its trade password"],
+      [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "This login can't trade this market"],
+      [/insufficient|not enough|exceed|不足|超过/i, () => "Not enough quantity or cash (a working order may hold it)"],
+      [/trading hours|market (is )?closed|not (in )?trading|非交易时段|休市|不在交易时间/i, () => "Outside this market's trading hours"],
+      [/price|tick|价格|价位/i, () => "Price not accepted (tick size or price limit)"],
+      [/disconnect|connection (lost|reset|refused)|ReadFail|断开|连接/i, () => "Lost the connection to OpenD — is its window still open?"],
+      [/position query failed/i, () => "Couldn't read positions — OpenD may be disconnected or still logging in"]]
+};
+function human(msg){
+  const s = String(msg ?? "");
+  for (const [re, f] of (HUMAN[CFG.lang] || HUMAN.en)){ const m = s.match(re); if (m) return f(m); }
+  return s;
+}
+const humanHtml = msg => { const h = human(msg); return h === String(msg ?? "") ? esc(h) : `<span title="${esc(msg)}">${esc(h)}</span>`; };
 const fmt = (v,d=2) => v==null||isNaN(v) ? "—" : Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 const sgn = v => v==null ? "" : (v>0.5?"up":v<-0.5?"dn":"flat");
 const pm = (v,d=2) => v==null ? "—" : (v>0?"+":"")+fmt(v,d);
 const k1 = v => (v/1000).toFixed(1)+"k";
-let sel = new Set(), last = null, OPEN = new Set(), ovMode = "daily";
+let last = null, OPEN = new Set(), ovMode = "daily";
 const DENSE = matchMedia("(max-width:420px)");
 DENSE.addEventListener("change", () => last && render(last));
+const NARROW = matchMedia("(max-width:560px)");
+NARROW.addEventListener("change", () => last && render(last));
 try { OPEN = new Set(JSON.parse(localStorage.getItem("lp_open") || "[]")); } catch(e) {}
 
 function card(k,v,cls,note){return `<div class="card"><div class="k">${k}</div><div class="v ${cls||""}">${v}</div>${note?`<div class="n">${note}</div>`:""}</div>`}
@@ -195,18 +257,24 @@ function render(s){
   if (!s.ok && !s.positions){ st.className="pill err"; st.textContent = s.message||"…"; return; }
   st.className = "pill " + (s.frozen ? "" : "live");
   st.textContent = (s.frozen ? (s.pulled_live ? L.frozen : L.after) : L.live+" · ") + (s.as_of||"");
+  st.title = s.tz || "";
+  const u = $("upd");                                          // a newer full release on GitHub
+  if (s.update && /^https:\/\/github\.com\//.test(s.update.url||"")){ u.hidden = false; u.href = s.update.url; u.textContent = L.update(s.update.version); }
+  else u.hidden = true;
   const m = $("mode");
   if (CFG.trading){ m.hidden=false; m.className = "pill "+(CFG.dry_run?"dry":"err"); m.textContent = CFG.dry_run?(DENSE.matches?L.dryShort:L.dry):L.real; m.title = CFG.dry_run?L.dry:L.real; }
-  const errs = Object.entries(s.errors||{}).map(([k,v])=>`${k}: ${v}`);
-  (s.accounts||[]).filter(a=>!a.ok).forEach(a=>errs.push(`${a.account_id}: ${a.error||"?"}`));
-  if (s.calendar_stale) errs.push(L.calstale);
-  $("errs").innerHTML = errs.map(e=>`<div>${esc(e)}</div>`).join("");
+  const errs = Object.entries(s.errors||{}).map(([k,v])=>[String(k).replace(/^moomoo·/, ""), v]);
+  (s.accounts||[]).filter(a=>!a.ok).forEach(a=>errs.push([a.account_id, a.error||"?"]));
+  if (s.calendar_stale) errs.push(["", L.calstale]);
+  $("errs").innerHTML = errs.map(([k,e])=>`<div>${k?esc(k)+": ":""}${humanHtml(e)}</div>`).join("");
 
   const p = s.periods||{};
-  const per = x => x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${esc(x.unconverted.join("/"))}`:"")] : ["…","",p.loading?L.loading:L.notyet];
+  const offN = Object.keys(s.errors||{}).map(k=>String(k).replace(/^moomoo·/, ""));
+  const per = x => x ? [pm(x.pnl), sgn(x.pnl), `${L.since} ${x.from.slice(5)}`+(x.flows_known?"":` · ${L.nodeposit}`)+(x.unconverted&&x.unconverted.length?` · ? ${esc(x.unconverted.join("/"))}`:"")] : ["…","",offN.length?L.partial:p.loading?L.loading:L.notyet];
   const w = per(p.week), mo = per(p.month);
   const short = a => String(a).split("-")[0];
-  const accts = (s.accounts||[]).map(a=>`${esc(short(a.account_id))} ${fmt(a.equity,0)}`).join(" · ");
+  const accts = (s.accounts||[]).map(a=>`${esc(short(a.account_id))} ${fmt(a.equity,0)}`).join(" · ")
+    + (offN.length ? ` · <span class="dn">${esc(L.missingAcct(offN.join("/")))}</span>` : "");
   const chips = Object.entries(s.acct_today||{}).map(([a,v])=>`${esc(short(a))} <span class="${sgn(v)}">${pm(v,0)}</span>`).join(" · ");
   const other = (s.other_ccy||[]).map(o=>`${esc(o.symbol)} ${pm(o.today)} ${esc(o.ccy)}`).join(" · ");
   if (DENSE.matches) {
@@ -217,21 +285,25 @@ function render(s){
     $("sum").innerHTML = `<div class="r1"><span class="k">${L.today}</span><span class="v ${sgn(s.today)}">${pm(s.today,0)}</span>`+
       `<span class="c">${s.today_missing ? `${s.today_missing} ${L.missing}` : chips}</span></div>`+
       `<div class="r2"><span${tip(w)}>${L.week} <b class="${wi[1]}">${wi[0]}</b></span><span${tip(mo)}>${L.month} <b class="${mi[1]}">${mi[0]}</b></span>`+
-      `<span class="tot" title="${accts}">${L.equity} <b>${fmt(s.equity,0)}</b></span></div>`+
-      ((accts || other) ? `<div class="r2">${accts}${other ? " · " + other : ""}</div>` : "");
+      `<span class="tot">${L.equity} <b>${fmt(s.equity,0)}</b></span></div>`+
+      ((accts || other) ? `<div class="r3">${accts}${other ? " · " + other : ""}</div>` : "");
   } else {
     $("sum").className = "sum";
     $("sum").innerHTML = card(L.equity, fmt(s.equity,0)+` <small>${esc(s.base||"")}</small>`, "", accts)
       + card(L.today, pm(s.today), sgn(s.today), s.today_missing ? `${s.today_missing} ${L.missing}` : [chips, other].filter(Boolean).join(" · "))
       + card(L.week, w[0], w[1], w[2]) + card(L.month, mo[0], mo[1], mo[2]);
   }
-  drawSpark(s.spark||[]);
+  drawSpark(s.spark||[], s);
   drawGroups(s);
   drawDeals(s);
-  syncBtns(); renderJobs(s.jobs||[]);
+  const uk = $("unlk"), need = (s.logins||[]).filter(l=>l.unlock);
+  if (!uk.hidden && need.length){ const all = need.every(l=>(s.unlocked||{})[l.name]); uk.textContent = all ? "🔓" : "🔒"; }
+  renderJobs(s.jobs||[]); drawX();
   if (!$("ov").hidden) drawOv();
 }
 
+// the last point is "now" only when every login was read just now; otherwise it is an earlier close
+const isNow = (d, s) => !!s && s.ok !== false && d.length > 0 && (!s.trading_day || d[d.length-1][0] === s.trading_day);
 function sparkSvg(d, W, H, stroke){
   const vs = d.map(x=>x[1]), lo = Math.min(...vs), hi = Math.max(...vs), sp = (hi-lo)||1;
   const pts = d.map((x,i)=>[i*W/(d.length-1), H-2-(x[1]-lo)/sp*(H-4)]);
@@ -240,43 +312,48 @@ function sparkSvg(d, W, H, stroke){
   return `<polyline points="0,${H} ${line} ${W},${H}" fill="${col}" fill-opacity=".12" stroke="none"/>`+
          `<polyline points="${line}" fill="none" stroke="${col}" stroke-width="${stroke}" vector-effect="non-scaling-stroke"/>`;
 }
-function drawSpark(d){
+function drawSpark(d, s){
   const el = $("eq");
   if (d.length < 2){ el.hidden = true; return; }
   el.hidden = false;
   el.title = L.sparkHint;
   const up = d[d.length-1][1] >= d[0][1];
   el.innerHTML = `<span>${d[0][0].slice(5)}<br>${k1(d[0][1])}</span><svg viewBox="0 0 200 26" preserveAspectRatio="none">${sparkSvg(d,200,26,1.5)}</svg>`+
-                 `<span class="r">${L.now}<br><b class="${up?"up":"dn"}">${k1(d[d.length-1][1])}</b></span>`;
+                 `<span class="r">${isNow(d, s) ? L.now : d[d.length-1][0].slice(5)}<br><b class="${up?"up":"dn"}">${k1(d[d.length-1][1])}</b></span>`;
 }
 
 const EXPAND_ALL = new URLSearchParams(location.search).has("expand");   // ?expand: everything open (screenshots)
 function drawGroups(s){
   const gs = s.groups||[];
   if (EXPAND_ALL) { gs.forEach(g=>OPEN.add(g.tk)); OPEN.add("_deals"); }
-  const keys = new Set(gs.flatMap(g=>g.legs.map(l=>l.key))); sel.forEach(k=>{ if(!keys.has(k)) sel.delete(k) });
   let h = `<tr><th class="l">${L.head[0]}</th><th>${L.head[1]}</th><th>${L.head[2]}</th><th>${L.head[3]}</th></tr>`;
   for (const g of gs){
     const open = OPEN.has(g.tk);
     const chg = g.und_chg==null ? "" : `<span class="chg ${g.und_chg>0.005?"up":g.und_chg<-0.005?"dn":"flat"}">${(g.und_chg>0?"+":"")+g.und_chg.toFixed(1)}%</span>`;
     const col = g.today >= 0 ? "var(--upb)" : "var(--dnb)";
     const bar = `background:linear-gradient(to left,${col} ${Math.round(g.bar*100)}%,transparent ${Math.round(g.bar*100)}%)`;
-    const pct = g.mixed ? pm(g.pl,0) : g.pct==null ? "—" : (g.pct>0?"+":"")+Math.round(g.pct)+"%";   // spread: dollars, not %
-    const gk = g.legs.filter(l=>l.closable>0).map(l=>l.key), gsel = gk.filter(k=>sel.has(k)).length;
-    const gcb = CFG.trading && gk.length ? `<input type="checkbox" data-g="${esc(g.tk)}" title="${L.grpAll}"${gsel===gk.length?" checked":""}>` : "";
-    h += `<tr class="grp${open?" open":""}" data-tk="${esc(g.tk)}"><td class="l">${gcb}<i class="car">▶</i>${esc(g.tk)}${chg}</td>`+
-         `<td>${g.legs.length ? fmt(g.mv,0) : "—"}</td><td style="${bar}" class="${sgn(g.today)}">${pm(g.today,0)}</td>`+
-         `<td><span class="pc ${g.mixed?sgn(g.pl):g.pct==null?"flat":sgn(g.pl)}${g.hot?" hot":""}">${pct}</span></td></tr>`;
+    const nLive = g.live ?? g.legs.length;                      // legs of a disconnected login are listed, not counted
+    const pctS = v => (v>0?"+":"")+Math.round(v)+"%";
+    // dollars always (they add up down the column); the % only where it means something (not for a spread)
+    const plCell = !nLive ? "—" : `<span class="pc ${sgn(g.pl)}">${pm(g.pl,0)}</span>`+
+      (g.pct!=null && !g.mixed ? `<small class="pp${g.hot?" hot":""}">${pctS(g.pct)}</small>` : "");
+    const soon = g.min_dte!=null && g.min_dte<=3 ? `<span class="chg warn" title="${esc(L.dteTip(g.min_dte))}">${g.min_dte===0?"⚠"+L.expToday:L.dteWarn(g.min_dte)}</span>` : "";
+    const offOnly = !nLive && g.legs.length > 0;                // held only by a login that is disconnected now
+    const offTag = offOnly ? ` <span class="pill stale">${L.offTag}</span>` : "";
+    h += `<tr class="grp${open?" open":""}${offOnly?" stale":""}" data-tk="${esc(g.tk)}"><td class="l"><i class="car">▶</i>${esc(g.tk)}${chg}${soon}${offTag}</td>`+
+         `<td>${nLive ? fmt(g.mv,0) : "—"}</td><td style="${offOnly?"":bar}" class="${sgn(g.today)}">${offOnly && !g.closed.length ? "—" : pm(g.today,0)}</td>`+
+         `<td>${plCell}</td></tr>`;
     if (!open) continue;
+    if (g.split) h += `<tr class="sub"><td class="l mut" colspan="4">${Object.entries(g.split).map(([k,v])=>`${L.split[k]||esc(k)} <span class="${sgn(v)}">${pm(v,0)}</span>`).join(" · ")}</td></tr>`;
     for (const l of g.legs){
       const what = l.what === "stock" ? L.stock : esc(l.what);
-      const dte = l.dte==null ? "" : ` · ${L.dte} ${l.dte}`;
+      const dte = l.dte==null ? "" : l.dte<=3 ? ` · <span class="dte">⚠ ${l.dte===0 ? L.expToday : L.dte+" "+l.dte}</span>` : ` · ${L.dte} ${l.dte}`;
       const gain = l.qty < 0 ? l.cost - l.px : l.px - l.cost;        // a short gains when the price falls
-      const px = (l.cost!=null && l.px!=null) ? ` · ${l.qty < 0 ? L.soldAt : L.cost} ${fmt(l.cost,2)} → <span class="${gain>1e-9?"up":gain<-1e-9?"dn":"flat"}">${fmt(l.px,2)}</span>`+
-        (l.pct!=null ? ` <span class="${sgn(l.pl)}">${l.pct>0?"+":""}${Math.round(l.pct)}%</span>` : "") : "";
-      const cb = CFG.trading ? `<input type="checkbox" data-k="${esc(l.key)}" ${sel.has(l.key)?"checked":""}>` : "";
-      const who = l.qty < 0 ? ` <span class="pill dry">${L.shortTag}</span>` : (l.what !== "stock" ? ` <small>${L.longTag}</small>` : "");
-      h += `<tr class="sub"><td class="l" colspan="4">${cb}<b>${esc(l.acct)}</b>${what} ×${fmt(Math.abs(l.qty),0)}${who}${dte}${px}</td></tr>`;
+      const px = (l.cost!=null && l.px!=null) ? ` · ${l.qty < 0 ? L.soldAt : L.cost} ${fmt(l.cost,2)} → ${L.nowPx} <span class="${gain>1e-9?"up":gain<-1e-9?"dn":"flat"}">${fmt(l.px,2)}</span>` : "";
+      const pl = l.pl==null ? "" : ` · <span class="${sgn(l.pl)}">${pm(l.pl,0)}</span>` + (l.pct!=null ? ` <small>(${pctS(l.pct)})</small>` : "");
+      const who = l.qty < 0 ? ` <span class="pill dry">${l.what === "stock" ? L.shortStock : L.shortTag}</span>` : (l.what !== "stock" ? ` <span class="pill">${L.longTag}</span>` : "");
+      const off = l.stale ? ` <span class="pill stale">${esc(L.offline((s.offline||{})[l.stale]||""))}</span>` : "";
+      h += `<tr class="sub${l.stale?" stale":""}"><td class="l" colspan="4"><b>${esc(l.acct)}</b>${what} ×${fmt(Math.abs(l.qty),0)}${who}${off}${dte}${px}${pl}</td></tr>`;
     }
     for (const c of g.closed)
       h += `<tr class="sub"><td class="l" colspan="4"><b>${esc(String(c.account).split("-")[0])}</b>${c.what==="stock"?L.stock:esc(c.what)} ${L.closedToday} · <span class="${sgn(c.today)}">${pm(c.today,0)}</span></td></tr>`;
@@ -287,16 +364,6 @@ function drawGroups(s){
     try { localStorage.setItem("lp_open", JSON.stringify([...OPEN])); } catch(e) {}
     render(last);
   });
-  document.querySelectorAll("#pos input[data-k]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
-    cb.onchange=()=>{cb.checked?sel.add(cb.dataset.k):sel.delete(cb.dataset.k); render(last);}; });
-  document.querySelectorAll("#pos input[data-g]").forEach(cb=>{ cb.onclick=e=>e.stopPropagation();
-    cb.onchange=()=>{ const g = gs.find(x=>x.tk===cb.dataset.g); if(!g) return;
-      g.legs.filter(l=>l.closable>0).forEach(l=>cb.checked?sel.add(l.key):sel.delete(l.key));
-      if (cb.checked) OPEN.add(g.tk);                       // show what was just selected
-      render(last); }; });
-  document.querySelectorAll("#pos input[data-g]").forEach(cb=>{ const g = gs.find(x=>x.tk===cb.dataset.g);
-    const ks = g ? g.legs.filter(l=>l.closable>0).map(l=>l.key) : [], n = ks.filter(k=>sel.has(k)).length;
-    cb.indeterminate = n>0 && n<ks.length; });
   const f = s.foot||{};
   $("foot").innerHTML = gs.length ? `${L.footMv} <b>$${fmt(f.mv,0)}</b>` + (f.expiry ? ` · ${f.expiry.slice(5).replace("-","/")} ${L.expiry}` : "") : "";
 }
@@ -352,8 +419,13 @@ function drawOv(){
   svg.onmouseleave = () => { tip.style.display = "none"; const ln = $("ovx"); if (ln) ln.style.display = "none"; };
 }
 
-function syncBtns(){ $("exitSel").disabled = sel.size===0; $("exitSel").textContent = L.exitSel+(sel.size?` (${sel.size})`:""); }
-function jobMsg(m){ return String(m).replace(/^placed (\d+)/, (_, n) => L.placed(n)); }   // the engine speaks English
+function jobMsgHtml(m, sim){                                  // an engine error keeps its warning that orders may be live
+  const s = String(m);
+  return s.startsWith("error:") ? `<b class="dn">${humanHtml(s.slice(6).split(" — ")[0])}</b> · ${esc(L.stillLive)}` : esc(jobMsg(s, sim));
+}
+function jobMsg(m, sim){ return String(m).replace(/^placed (\d+)/, (_, n) => (sim ? L.simPlaced : L.placed)(n)); }   // the engine speaks English
+const stLabel = (l, sim) => sim && l.state === "filled" ? L.simFilled : (L.st[l.state]||esc(l.state));
+const jobMode = j => j.mode === "dry" ? L.simJob : ((L.modes||{})[j.mode]||esc(j.mode));
 function checkLine(j){
   if (!j.done || !j.closed_check) return "";
   if (j.closed_check === "dry") return `<div class="mut">${L.dryNote}</div>`;
@@ -362,20 +434,22 @@ function checkLine(j){
   const left = j.legs.filter(l=>l.left>0).map(l=>`${esc(String(l.account).split("-")[0])} ${esc(l.name)} ×${fmt(l.left,0)}`).join(" · ");
   return `<div class="dn"><b>${L.someLeft}</b> ${left}</div>`;
 }
+function setJobs(h){ $("jobs").innerHTML = h; $("xpJobs").innerHTML = h; }
 function renderJobs(jobs){
-  if (DENSE.matches){                                          // the small window: one line per leg
-    $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} · ${(L.modes||{})[j.mode]||esc(j.mode)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>`+
-      checkLine(j) + (j.message?`<small>${esc(jobMsg(j.message))}</small>`:"") +
+  if (NARROW.matches){                                         // the app window: one line per leg (the 7-column table overflows below ~560 px)
+    setJobs(jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} · ${jobMode(j)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>`+
+      checkLine(j) + (j.message?`<small>${jobMsgHtml(j.message, j.mode==="dry")}</small>`:"") +
       j.legs.map(l=>`<div class="ft">${esc(String(l.account).split("-")[0])} ${esc(l.name)} · ${(L.close||{})[l.side]||esc(l.side)} ×${fmt(l.qty,0)}`+
-        ` @${fmt(l.price,2)} · ${L.st[l.state]||esc(l.state)} · ${L.filled} ${fmt(l.filled,0)}</div>`).join("") + `</div>`).join("");
+        ` @${fmt(l.price,2)} · ${stLabel(l, j.mode==="dry")} · ${L.filled} ${fmt(l.filled,0)}`+
+        `${l.note?` · <span class="dn">${humanHtml(l.note)}</span>`:""}</div>`).join("") + `</div>`).join(""));
     document.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>post("/api/stop",{job:b.dataset.stop}));
     return;
   }
-  $("jobs").innerHTML = jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${(L.modes||{})[j.mode]||esc(j.mode)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
-   ${checkLine(j)}${j.message?`<small>${esc(jobMsg(j.message))}</small>`:""}
+  setJobs(jobs.slice().reverse().map(j=>`<div class="job"><h3>${L.job} ${j.id} · ${jobMode(j)} ${j.done?"":`<button data-stop="${j.id}">${L.stop}</button>`}</h3>
+   ${checkLine(j)}${j.message?`<small>${jobMsgHtml(j.message, j.mode==="dry")}</small>`:""}
    <div class="tbl"><table><tr><th class="l">${L.inst}</th><th>${L.side}</th><th>${L.qty}</th><th>${L.price}</th><th>${L.bidask}</th><th>${L.filled}</th><th class="l">${L.state}</th></tr>
-   ${j.legs.map(l=>`<tr><td class="l">${esc(l.name)}</td><td>${(L.close||{})[l.side]||esc(l.side)}</td><td>${fmt(l.qty,0)}</td><td>${fmt(l.price,2)}</td><td>${fmt(l.bid,2)} / ${fmt(l.ask,2)}</td><td>${fmt(l.filled,0)}</td><td class="l">${L.st[l.state]||esc(l.state)}${l.note?` <small>${esc(l.note)}</small>`:""}</td></tr>`).join("")}
-   </table></div></div>`).join("");
+   ${j.legs.map(l=>`<tr><td class="l"><small>${esc(String(l.account).split("-")[0])}</small> ${esc(l.name)}</td><td>${(L.close||{})[l.side]||esc(l.side)}</td><td>${fmt(l.qty,0)}</td><td>${fmt(l.price,2)}</td><td>${fmt(l.bid,2)} / ${fmt(l.ask,2)}</td><td>${fmt(l.filled,0)}</td><td class="l">${stLabel(l, j.mode==="dry")}${l.note?` <small>${humanHtml(l.note)}</small>`:""}</td></tr>`).join("")}
+   </table></div></div>`).join(""));
   document.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>post("/api/stop",{job:b.dataset.stop}));
 }
 async function post(path, body){
@@ -383,18 +457,112 @@ async function post(path, body){
   const j = await r.json().catch(()=>({})); if(!r.ok) alert(j.error||r.status); poll(); return j;
 }
 function exitKeys(keys){
-  if(!keys.length) return;
+  if(!keys.length) return false;
   const legs = (last&&last.groups||[]).flatMap(g=>g.legs.map(l=>({...l, tk:g.tk}))).filter(l=>keys.includes(l.key));
   const list = legs.map(l=>`${l.acct}  ${l.tk} ${l.what==="stock"?L.stock:l.what}  ${(L.close||{})[l.side]||l.side} ×${fmt(l.closable,0)}`).join("\n");
-  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real, list))) return;
-  post("/api/exit",{keys}); sel.clear();
+  const offN = Object.keys((last&&last.errors)||{}).map(k=>String(k).replace(/^moomoo·/, ""));
+  const both = new Set(legs.filter(l=>l.what!=="stock" && l.qty<0).map(l=>l.tk));
+  const warn = [offN.length ? L.offlineConfirm(offN.join("/")) : "",
+                legs.some(l=>l.what!=="stock" && l.qty>0 && both.has(l.tk)) ? L.legWarn : ""].filter(Boolean).join("\n");
+  const pct = Math.round((CFG.start_frac ?? 0.7) * 100), step = CFG.step_sec ?? 10;
+  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real, list, pct, step) + (warn ? "\n\n" + warn : ""))) return false;
+  post("/api/exit",{keys});
+  return true;
 }
-async function poll(){ try{ const r = await fetch("/api/state",{cache:"no-store"}); render(await r.json()); }catch(e){ $("status").className="pill err"; $("status").textContent="offline"; } }
+async function poll(){ try{ const r = await fetch("/api/state" + (CFG.view_only ? location.search : ""),{cache:"no-store"}); render(await r.json()); }catch(e){ $("status").className="pill err"; $("status").textContent="offline"; } }
 const setRefreshLabel = () => { $("refresh").textContent = DENSE.matches ? "↻" : L.refresh; $("refresh").title = L.refresh; };
 setRefreshLabel(); DENSE.addEventListener("change", setRefreshLabel); $("refresh").onclick = ()=>post("/api/refresh");
-if (CFG.trading){ $("tradebar").hidden=false; $("exitAll").textContent=L.exitAll; $("tradeNote").textContent=L.note;
-  $("exitSel").onclick=()=>exitKeys([...sel]);
-  $("exitAll").onclick=()=>exitKeys((last&&last.groups||[]).flatMap(g=>g.legs.filter(l=>l.closable>0).map(l=>l.key))); }
+// ── exit page: press 清仓, pick legs (options and stock apart), confirm — the old exit window's flow ──
+const X = {
+ en:{open:"🧹 Exit",title:"Exit",opt:"Options",stk:"Stock",all:"Select all",none:"Unselect all",go:n=>`Exit (${n})`,
+   stopAll:"Cancel all & stop",ref:"Refresh quotes",at:t=>`quotes ${t}`,start:"first",spread:"spread",
+   noQuote:"no quote",busy:"being worked",noClose:"nothing closable now (an open order may hold it)",held:"No positions.",
+   picked:n=>`${n} selected`,nothing:"Nothing selected",sellGet:v=>`selling at first prices ≈ $${v}`,buyPay:v=>`buying back ≈ $${v}`,
+   offline:n=>`${n} is offline — its positions are not listed here`,secAll:"all",
+   dry:"Rehearsal · real positions and quotes, no order is sent",real:"LIVE · these are real orders",paper:"Paper account",
+   rule:(p,s)=>`Limit orders only: sell to close starts at bid + ${p}% of the spread, buy to close at ask − ${p}%; one tick toward the bid (ask) every ${s} s, never past it. Options trade 09:30–16:00 ET only.`},
+ zh:{open:"🧹 清仓",title:"清仓",opt:"期权",stk:"正股",all:"全选",none:"取消全选",go:n=>`清仓 (${n} 条)`,
+   stopAll:"全部撤单并停止",ref:"刷新报价",at:t=>`报价 ${t}`,start:"首挂",spread:"价差",
+   noQuote:"没有报价",busy:"正在清",noClose:"现在没有可平的（可能有挂单占着）",held:"没有持仓。",
+   picked:n=>`勾了 ${n} 条`,nothing:"一条都没勾",sellGet:v=>`按首挂卖出约收 $${v}`,buyPay:v=>`买回约付 $${v}`,
+   offline:n=>`${n} 没连上 —— 它的持仓不在这里`,secAll:"全选",
+   dry:"演练 · 真持仓真报价，一张单都不发",real:"真实下单 · 按下去是真的在卖 / 买回",paper:"模拟账户",
+   rule:(p,s)=>`只挂限价单：卖出平仓从买一价 + 价差的 ${p}% 开始，买回平仓从卖一价 − ${p}% 开始，每 ${s} 秒往买一（卖一）挪一格，永不越过。期权只能在美东 09:30–16:00 交易。`}
+};
+const XL = X[CFG.lang] || X.en;
+let xsel = new Set(), xq = {}, xqAt = "";
+function xLegs(){                                              // legs of connected logins, with the preview's quote
+  const busy = new Set(((last&&last.jobs)||[]).filter(j=>!j.done).flatMap(j=>j.legs.map(l=>l.key)));
+  return ((last&&last.groups)||[]).flatMap(g=>g.legs.filter(l=>!l.stale).map(l=>({...l, tk:g.tk,
+    kind: l.what==="stock" ? "stk" : "opt", pv: xq[l.key], busy: busy.has(l.key)})));
+}
+const xCan = l => !!l.pv && !l.busy && l.pv.qty > 0;
+async function xLoad(){
+  $("xpAt").textContent = "…";
+  const [ok, j] = await api("/api/exit_preview", {});
+  if (ok){ xq = Object.fromEntries((j.rows||[]).map(r=>[r.key, r]));
+    xqAt = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false}); }
+  else xqAt = String(j.error||"?");
+  drawX();
+}
+function drawX(){
+  if ($("xp").hidden) return;
+  const legs = xLegs();
+  [...xsel].forEach(k=>{ const l = legs.find(x=>x.key===k); if (!l || !xCan(l)) xsel.delete(k); });
+  const offN = Object.keys((last&&last.errors)||{}).map(k=>String(k).replace(/^moomoo·/, ""));
+  $("xpOff").textContent = offN.length ? XL.offline(offN.join("/")) : "";
+  const row = l => {
+    const p = l.pv, on = xsel.has(l.key), ok = xCan(l);
+    const who = l.qty < 0 ? ` <span class="pill dry">${l.kind==="stk"?L.shortStock:L.shortTag}</span>` : (l.kind==="opt" ? ` <span class="pill">${L.longTag}</span>` : "");
+    const sp = p && p.bid > 0 ? (p.ask-p.bid)/((p.ask+p.bid)/2)*100 : null;          // stock spreads are hundredths of a %
+    const q = (l.busy ? XL.busy : !p ? XL.noClose : p.bid==null ? XL.noQuote :
+      `${L.bidask} ${fmt(p.bid,2)} / ${fmt(p.ask,2)} · ${XL.spread} ${sp==null?"—":sp.toFixed(sp>=10?0:sp>=1?1:2)+"%"} · ${XL.start} <b>${fmt(p.start,2)}</b>`);
+    const dir = (L.close||{})[l.side]||esc(l.side);
+    return `<label class="xr${on?" on":""}${ok?"":" off"}"><input type="checkbox" data-x="${esc(l.key)}"${on?" checked":""}${ok?"":" disabled"}>`+
+      `<b>${esc(l.acct)}</b>${l.kind==="stk" ? esc(l.tk) : esc(l.tk)+" "+esc(l.what)} ×${fmt(p?p.qty:Math.abs(l.qty),0)}${who}<div class="q">${dir} · ${q}</div></label>`;
+  };
+  const box = (kind, title) => {
+    const ls = legs.filter(l=>l.kind===kind); if (!ls.length) return "";
+    const ks = ls.filter(xCan).map(l=>l.key), all = ks.length > 0 && ks.every(k=>xsel.has(k));
+    let h = `<div class="xsec"><h4>${title}${ks.length?`<label><input type="checkbox" data-xs="${kind}"${all?" checked":""}>${XL.secAll}</label>`:""}</h4><div class="xbox">`;
+    if (kind === "opt") for (const tk of [...new Set(ls.map(l=>l.tk))]) {    // a symbol across every login: one tick
+      const g = ls.filter(l=>l.tk===tk), gk = g.filter(xCan).map(l=>l.key), gall = gk.length > 0 && gk.every(k=>xsel.has(k));
+      h += `<label class="xg">${gk.length?`<input type="checkbox" data-xg="${esc(tk)}"${gall?" checked":""}>`:""}${esc(tk)}</label>` + g.map(row).join("");
+    } else h += ls.map(row).join("");
+    return h + `</div></div>`;
+  };
+  $("xpBody").innerHTML = (box("opt", XL.opt) + box("stk", XL.stk)) || `<p class="mut">${XL.held}</p>`;
+  const pick = (sel, on) => { sel.forEach(l=>on?xsel.add(l.key):xsel.delete(l.key)); drawX(); };
+  document.querySelectorAll("#xpBody [data-x]").forEach(cb=>cb.onchange=()=>{ cb.checked?xsel.add(cb.dataset.x):xsel.delete(cb.dataset.x); drawX(); });
+  document.querySelectorAll("#xpBody [data-xg]").forEach(cb=>{ const g = legs.filter(l=>l.kind==="opt" && l.tk===cb.dataset.xg && xCan(l));
+    cb.indeterminate = g.some(l=>xsel.has(l.key)) && !g.every(l=>xsel.has(l.key)); cb.onchange=()=>pick(g, cb.checked); });
+  document.querySelectorAll("#xpBody [data-xs]").forEach(cb=>{ const g = legs.filter(l=>l.kind===cb.dataset.xs && xCan(l));
+    cb.indeterminate = g.some(l=>xsel.has(l.key)) && !g.every(l=>xsel.has(l.key)); cb.onchange=()=>pick(g, cb.checked); });
+  const picked = legs.filter(l=>xsel.has(l.key));
+  const amt = side => picked.filter(l=>l.side===side && l.pv && l.pv.start!=null).reduce((a,l)=>a + l.pv.start*l.pv.qty*(l.pv.mult||1), 0);
+  const sg = amt("SELL"), bp = amt("BUY");
+  $("xpSum").textContent = picked.length ? [XL.picked(picked.length), sg ? XL.sellGet(fmt(sg,0)) : "", bp ? XL.buyPay(fmt(bp,0)) : ""].filter(Boolean).join(" · ") : XL.nothing;
+  const frees = legs.filter(xCan), allOn = frees.length > 0 && frees.every(l=>xsel.has(l.key));
+  $("xpAll").textContent = allOn ? XL.none : XL.all; $("xpAll").disabled = !frees.length;
+  $("xpGo").textContent = XL.go(xsel.size); $("xpGo").disabled = !xsel.size;
+  $("xpStop").disabled = !((last&&last.jobs)||[]).some(j=>!j.done);
+  $("xpAt").textContent = xqAt ? XL.at(xqAt) : "";
+}
+if (CFG.trading){
+  $("tradebar").hidden = false; $("xOpen").textContent = XL.open;
+  $("xpTitle").textContent = XL.title; $("xpRef").textContent = XL.ref; $("xpStop").textContent = XL.stopAll;
+  $("xpNote").textContent = XL.rule(Math.round((CFG.start_frac ?? 0.7) * 100), CFG.step_sec ?? 10);
+  $("xpMode").className = "xmode" + (CFG.dry_run ? "" : " real");
+  $("xpMode").textContent = CFG.dry_run ? XL.dry : CFG.mode === "paper" ? XL.paper : XL.real;
+  $("xOpen").onclick = () => { $("xp").hidden = false; xsel.clear(); drawX(); xLoad(); };
+  $("xpX").onclick = () => { $("xp").hidden = true; };
+  $("xpRef").onclick = xLoad;
+  $("xpAll").onclick = () => { const f = xLegs().filter(xCan), on = !(f.length && f.every(l=>xsel.has(l.key)));
+    f.forEach(l=>on?xsel.add(l.key):xsel.delete(l.key)); drawX(); };
+  $("xpGo").onclick = () => { if (exitKeys([...xsel])) { xsel.clear(); setTimeout(xLoad, 1500); } drawX(); };
+  $("xpStop").onclick = () => post("/api/stop", {});
+  if (new URLSearchParams(location.search).has("exit")) $("xOpen").click();   // ?exit: open it (screenshots)
+}
 // with the built-in exit on too, say which red button is which: the old tool always sends real orders
 if (CFG.exit_command){ const b = $("exitCmd"); b.hidden = false; b.textContent = CFG.trading ? L.exitCmdOld : L.exitCmd; b.onclick = ()=>post("/api/exit_command"); }
 $("eq").onclick = () => { $("ov").hidden = false; drawOv(); };
@@ -407,21 +575,23 @@ if (new URLSearchParams(location.search).has("chart")) $("ov").hidden = false;  
 const S = {
  en:{title:"Settings",lang:"Language",brokers:"Brokers",demo:"Demo data",mm:"moomoo",
    mmNote:"One OpenD per moomoo login, each on its own port (api_port in OpenD.xml). With one login the name can stay empty.",
-   label:"Name",port:"Port",add:"+ Add a login",del:"Remove",paper:"Use the simulate (paper) account",ib:"Interactive Brokers",
+   label:"Name",port:"Port",odPh:"OpenD.exe location (optional: the panel starts it when it isn't running)",add:"+ Add a login",del:"Remove",paper:"Use the simulate (paper) account",ib:"Interactive Brokers",
    ibPorts:{7496:"TWS live",7497:"TWS paper",4001:"Gateway live",4002:"Gateway paper"},tz:"Time zone",every:"Refresh",sec:"s",
    test:"Test connection",save:"Save & restart",testing:"Testing…",saving:"Saving…",restarting:"Restarting — the page reloads by itself",
    saved:"Saved",trade:"Exit orders",tradeOff:"off",tradeDry:"dry run (no orders are sent)",tradeLive:"LIVE ORDERS",
-   tradeNote:"Can only be changed by editing the config file, so a click here can never turn orders on. While orders are live, brokers, logins and ports can't be changed here either.",file:"File",
+   ladStart:"First price",ladStartNote:"% of the spread: selling from the bid up, buying back from the ask down",ladStep:"Step",ladStepNote:"one tick toward the bid (ask)",
+   tradeNote:"A rehearsal sends no orders. To send real orders, open the config file below in a text editor, set dry_run = false and restart (ask whoever set this up if unsure) — a click here can never turn orders on. While orders are live, brokers, logins and ports can't be changed here either.",file:"File",
    code:{ok:"connected",closed:"nothing is listening on that port — start OpenD / TWS, or check the port",error:"error",timeout:"no answer in time"},
    accounts:"accounts",welcome:"First run: pick your broker, press Test connection, then Save & restart.",
    lnk:"Desktop icon",lnkDone:"Icon placed:"},
  zh:{title:"设置",lang:"语言",brokers:"券商",demo:"演示数据",mm:"moomoo",
    mmNote:"每个 moomoo 号开一个 OpenD，各用不同端口（OpenD.xml 里的 api_port）。只有一个号时名称可以留空。",
-   label:"名称",port:"端口",add:"+ 加一个登录",del:"删除",paper:"用模拟账户",ib:"盈透 IBKR",
+   label:"名称",port:"端口",odPh:"OpenD.exe 位置（可留空；填了的话，没开时面板会自己开）",add:"+ 加一个登录",del:"删除",paper:"用模拟账户",ib:"盈透 IBKR",
    ibPorts:{7496:"TWS 实盘",7497:"TWS 模拟",4001:"Gateway 实盘",4002:"Gateway 模拟"},tz:"时区",every:"刷新间隔",sec:"秒",
    test:"测试连线",save:"保存并重启",testing:"测试中…",saving:"保存中…",restarting:"重启中…页面会自己刷新",
    saved:"已保存",trade:"清仓下单",tradeOff:"关",tradeDry:"演练（不会真的下单）",tradeLive:"真实下单",
-   tradeNote:"这一项只能手动改设定文件，在这里点不会打开下单。真实下单开着的时候，券商、登录和端口也不能在这里改。",file:"设定文件",
+   ladStart:"首挂",ladStartNote:"% 价差：卖出从买一价往上算，买回从卖一价往下算",ladStep:"每隔",ladStepNote:"往买一（卖一）挪一格",
+   tradeNote:"演练时不会真的下单。要改成真实下单，只能用记事本打开下面的设定文件，把 dry_run 改成 false 再重启（不确定就先问帮你装的人）—— 在这里点不会打开下单。真实下单开着的时候，券商、登录和端口也不能在这里改。",file:"设定文件",
    code:{ok:"连上了",closed:"这个端口没有程序在听 —— 先打开 OpenD / TWS，或检查端口",error:"出错",timeout:"等太久没回应"},
    accounts:"账户",welcome:"第一次使用：选好券商，按「测试连线」，没问题再按「保存并重启」。",
    lnk:"桌面放图标",lnkDone:"已放到："}
@@ -445,9 +615,11 @@ function collect(){
   if ($("sTz")) f.display_tz = $("sTz").value;
   if ($("sRef")) f.refresh_sec = +$("sRef").value;
   const rows = document.querySelectorAll("#setBody .lg");
-  if (rows.length) f.moomoo.logins = [...rows].map(r => ({label:r.querySelector(".lbl").value.trim(), port:+r.querySelector(".port").value}));
+  if (rows.length) f.moomoo.logins = [...rows].map(r => ({label:r.querySelector(".lbl").value.trim(), port:+r.querySelector(".port").value,
+    opend:r.querySelector(".od").value.trim()}));
   if ($("sPaper")) f.moomoo.paper = $("sPaper").checked;
   if ($("sIb")) f.ibkr.port = +$("sIb").value;
+  if ($("sPct")) f.trading = {...(f.trading||{}), start_pct: +$("sPct").value, step_sec: +$("sStep").value};
 }
 function drawSettings(){
   const f = FORM, m = f.moomoo, has = b => f.brokers.includes(b);
@@ -462,20 +634,24 @@ function drawSettings(){
        ["moomoo","ibkr","demo"].map(b=>`<label class="ck"><input type="checkbox" data-b="${b}"${has(b)?" checked":""}>${b==="moomoo"?SL.mm:b==="ibkr"?SL.ib:SL.demo}</label>`).join("")+`</div>`;
   if (has("moomoo")) h += `<div class="sub2"><small>${SL.mmNote}</small>`+
        m.logins.map((lg,i)=>`<div class="row lg"><input class="lbl" type="text" maxlength="12" placeholder="${SL.label}" value="${esc(lg.label)}">`+
-         `<input class="port" type="number" min="1" max="65535" value="${esc(lg.port)}">${m.logins.length>1?`<button data-del="${i}">${SL.del}</button>`:""}</div>`).join("")+
+         `<input class="port" type="number" min="1" max="65535" value="${esc(lg.port)}">${m.logins.length>1?`<button data-del="${i}">${SL.del}</button>`:""}`+
+         `<input class="od" type="text" placeholder="${SL.odPh}" value="${esc(lg.opend||"")}"></div>`).join("")+
        `<div class="row"><button id="sAdd">${SL.add}</button><label class="ck"><input type="checkbox" id="sPaper"${m.paper?" checked":""}>${SL.paper}</label></div></div>`;
   if (has("ibkr")) h += `<div class="sub2"><div class="row"><label>${SL.ib}</label><select id="sIb">`+
        Object.entries(SL.ibPorts).map(([p,n])=>opt(p,f.ibkr.port,`${p} · ${n}`)).join("")+`</select></div></div>`;
   h += `</div>`;
   const t = f.trading||{};
+  const steps = [3,5,10,15,20,30,60].includes(+t.step_sec) ? [3,5,10,15,20,30,60] : [+t.step_sec,3,5,10,15,20,30,60];
   h += `<div class="fs"><div class="row"><label>${SL.trade}</label><b class="${t.enabled&&!t.dry_run?"dn":""}">${!t.enabled?SL.tradeOff:t.dry_run?SL.tradeDry:SL.tradeLive}</b></div>`+
+       (t.enabled ? `<div class="row"><label>${SL.ladStart}</label><input id="sPct" type="number" min="0" max="100" style="width:64px" value="${esc(t.start_pct??70)}"><small>${SL.ladStartNote}</small></div>`+
+         `<div class="row"><label>${SL.ladStep}</label><select id="sStep">${steps.map(v=>opt(v,t.step_sec??10,v+" "+SL.sec)).join("")}</select><small>${SL.ladStepNote}</small></div>` : "")+
        `<small>${SL.tradeNote}</small><br><small>${SL.file}: ${esc(CFGPATH)}</small></div>`;
   h += `<div class="bar"><button id="sTest">${SL.test}</button><button id="sSave" class="pri">${SL.save}</button><button id="sLnk">${SL.lnk}</button></div><div id="sRes" class="res"></div>`;
   $("setBody").innerHTML = h;
   document.querySelectorAll("#setBody [data-b]").forEach(cb => cb.onchange = () => { collect(); const b = cb.dataset.b;
     FORM.brokers = cb.checked ? [...new Set([...FORM.brokers, b])] : FORM.brokers.filter(x=>x!==b); drawSettings(); });
   if ($("sAdd")) $("sAdd").onclick = () => { collect(); const ps = FORM.moomoo.logins.map(l=>+l.port||0);
-    FORM.moomoo.logins.push({label:"", port:Math.max(11110, ...ps)+1}); drawSettings(); };
+    FORM.moomoo.logins.push({label:"", port:Math.max(11110, ...ps)+1, opend:""}); drawSettings(); };
   document.querySelectorAll("#setBody [data-del]").forEach(b => b.onclick = () => { collect(); FORM.moomoo.logins.splice(+b.dataset.del,1); drawSettings(); });
   $("sTest").onclick = async () => { collect(); $("sRes").innerHTML = `<div class="mut">${SL.testing}</div>`;
     const [ok, j] = await api("/api/config/test", {form:FORM});
@@ -528,7 +704,8 @@ function drawUnlock(){
 $("unlTitle").textContent = UL.title;
 $("unlX").onclick = () => { $("unl").hidden = true; };
 if (CFG.trading){ const u = $("unlk"); u.hidden = false; u.title = UL.title; u.onclick = () => { $("unl").hidden = false; drawUnlock(); }; }
-poll(); setInterval(poll, 3000);
+if (CFG.view_only) $("refresh").hidden = true;                  // phone view: read-only, refreshes by itself
+poll(); setInterval(poll, CFG.poll_ms || 3000);
 </script>
 </body>
 </html>

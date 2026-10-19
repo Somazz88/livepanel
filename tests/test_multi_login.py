@@ -27,7 +27,7 @@ def cfg(logins=None, **moomoo):
 
 def test_no_logins_list_is_one_login_without_label():
     assert moomoo_logins(cfg(port=11111)) == [{"host": "127.0.0.1", "port": 11111, "paper": False,
-                                               "include_futures": True, "label": None, "since": None}]
+                                               "include_futures": True, "label": None, "since": None, "opend": None}]
 
 
 def test_three_logins_build_three_brokers_with_distinct_names():
@@ -239,3 +239,107 @@ def test_a_seller_only_group_still_has_a_percent():
     g = group_positions([Position("A·MY-0001", put, -2, 0.80, 0.60, -120.0, 40.0, 0, 2)], {}, date(2026, 10, 19),
                         show_und=False)[0][0]
     assert not g["mixed"] and g["pct"] == 25.0                            # sold at 0.80, now 0.60: +40 on 160 received
+
+
+def test_the_keeper_starts_a_closed_opend_once_per_window(tmp_path):
+    from livepanel.__main__ import OpenDKeeper
+    exe = tmp_path / "OpenD.exe"
+    exe.write_bytes(b"")
+    c = cfg([{"label": "Main", "port": 11111}, {"label": "B", "port": 11112, "opend": str(exe)}])
+    up, started, clock = {11111}, [], [1000.0]
+    k = OpenDKeeper(c, popen=started.append, port_open=lambda h, p: p in up, now=lambda: clock[0])
+    assert k.start_missing() == ["B"] and started == [str(exe)]           # only the login with an OpenD path
+    assert k.start_missing() == []                                       # not again within 5 minutes
+    clock[0] += 301
+    assert k.start_missing() == ["B"]                                    # still closed later: try again
+    up.add(11112)
+    clock[0] += 301
+    assert k.start_missing() == []                                       # running: leave it alone
+
+
+def test_only_an_opend_program_can_be_configured(tmp_path):
+    with pytest.raises(ValueError, match="OpenD program"):
+        moomoo_logins(cfg([{"label": "A", "port": 11111, "opend": r"C:\Windows\System32\calc.exe"}]))
+    with pytest.raises(ValueError, match="OpenD program"):
+        moomoo_logins(cfg([{"label": "A", "port": 11111, "opend": r"C:\x\OpenD.exe\..\evil.exe"}]))
+    ok = moomoo_logins(cfg([{"label": "A", "port": 11111, "opend": r'"C:\x\OpenD_2\OpenD.exe"'}]))
+    assert ok[0]["opend"] == r"C:\x\OpenD_2\OpenD.exe"                     # quotes from a copied path are fine
+    from livepanel import settings
+    f = settings.form_from(cfg([{"label": "A", "port": 11111}, {"label": "B", "port": 11112}]))
+    f["moomoo"]["logins"][1]["opend"] = r"C:\x\notepad.exe"
+    with pytest.raises(ValueError, match="OpenD program"):
+        settings.apply({"brokers": {"use": ["moomoo"]}, "moomoo": {}}, f)
+
+
+def test_a_disconnected_login_keeps_its_last_positions_greyed_and_out_of_the_totals():
+    a, b2 = _login("Main", "Main·SG-0001", 3, 1.00), _login("B", "B·MY-0002", 5, 2.00)
+    comp = Composite([a, b2])
+    comp.connect()
+    comp.snapshot(); comp.positions()
+    assert comp.offline_positions() == {}
+    def boom():
+        raise RuntimeError("OpenD not reachable at 127.0.0.1:11112")
+    b2.positions = boom                                                   # B's OpenD goes away
+    live = comp.positions()
+    off = comp.offline_positions()
+    assert [p.account_id for p in live] == ["Main·SG-0001"] and list(off) == [b2.name]
+    gs, foot = group_positions(live, {}, date(2026, 10, 19), show_und=False, offline={n: ps for n, (ps, _) in off.items()})
+    g = gs[0]
+    stale = [l for l in g["legs"] if l.get("stale")]
+    assert len(stale) == 1 and stale[0]["closable"] == 0 and stale[0]["account"] == "B·MY-0002"
+    assert g["live"] == 1 and g["mv"] == a.pos[0].market_value and foot["mv"] == a.pos[0].market_value
+    keys = [l["key"] for l in g["legs"] if l["closable"] > 0]             # what "exit all" would send
+    assert keys == [f"Main·SG-0001|{a.pos[0].instrument.key}"]
+
+
+def test_nearest_expiry_and_option_vs_stock_split():
+    c = Instrument("US.NVDA261218C150000", "NVDA 12/18 150C", AssetClass.OPTION, multiplier=100.0, underlying="NVDA",
+                   expiry=date(2026, 12, 18), strike=150.0, right="C")
+    p = Instrument("US.NVDA261023P150000", "NVDA 10/23 150P", AssetClass.OPTION, multiplier=100.0, underlying="NVDA",
+                   expiry=date(2026, 10, 23), strike=150.0, right="P")
+    s = Instrument("US.NVDA", "NVDA", AssetClass.STOCK)
+    legs = [Position("A·SG-1", c, 1, 30.0, 33.0, 3300.0, 300.0, 0, 1), Position("A·SG-1", p, -1, 1.0, 0.5, -50.0, 50.0, 0, 1),
+            Position("A·SG-1", s, 100, 170.0, 180.0, 18000.0, 1000.0, 0, 100)]
+    g = group_positions(legs, {}, date(2026, 10, 21), show_und=False)[0][0]
+    assert g["min_dte"] == 2 and g["split"] == {"opt": 350.0, "stk": 1000.0} and g["pl"] == 1350.0
+    only_opt = group_positions(legs[:2], {}, date(2026, 10, 21), show_und=False)[0][0]
+    assert only_opt["split"] is None
+
+
+def test_a_percent_is_rounded_once():
+    s = Instrument("US.TSLA", "TSLA", AssetClass.STOCK)
+    g = group_positions([Position("A·MY-2", s, -20, 260.0, 251.0, -5020.0, 180.0, 0, 20)], {}, date(2026, 10, 21),
+                        show_und=False)[0][0]
+    assert g["pct"] == 3.46 and g["legs"][0]["pct"] == 3.46               # was 3.5, which the page showed as "4%"
+
+
+def test_exit_preview_shows_the_first_price_the_engine_would_place(tmp_path):
+    long_, short = _login("Main", "Main·SG-0001", 3, 1.00), _login("B", "B·MY-0002", -2, 1.00)
+    for b in (long_, short):                                              # one contract, one market: same quote
+        b.q = {k: Quote(1.00, 1.20, 0.01, 1.10) for k in b.q}
+    short.pos[0].closable_qty = 2.0                                       # what MoomooBroker reports after closable()
+    comp = Composite([long_, short])
+    comp.connect()
+    pos = comp.positions()
+    rows = {r["account"]: r for r in Liquidator(comp, tmp_path, "test").preview(pos)}
+    assert rows["Main·SG-0001"]["side"] == "SELL" and rows["Main·SG-0001"]["start"] == 1.14     # bid + 70% of 0.20
+    assert rows["B·MY-0002"]["side"] == "BUY" and rows["B·MY-0002"]["start"] == 1.06           # ask - 70% of 0.20
+    assert rows["B·MY-0002"]["qty"] == 2 and rows["B·MY-0002"]["mult"] == 100.0
+    half = {r["account"]: r["start"] for r in Liquidator(comp, tmp_path, "test", start_frac=0.5).preview(pos)}
+    assert half == {"Main·SG-0001": 1.10, "B·MY-0002": 1.10}
+    assert not any(c[0] == "place" for b in (long_, short) for c in b.calls)                 # quotes only
+
+
+def test_a_rehearsal_across_two_logins_keeps_each_legs_fills_apart(tmp_path):
+    # 10-19: two dry-run logins both numbered their orders sim-1, sim-2 …, and a 10-lot showed "filled 20"
+    from livepanel.brokers.fake import DryRun
+    a, b2 = _login("Main", "Main·SG-0001", 10, 1.00), _login("B", "B·MY-0002", 20, 1.00)
+    comp = Composite([DryRun(a), DryRun(b2)])
+    comp.connect()
+    pos = comp.positions()
+    liq = Liquidator(comp, tmp_path, "dry", step_sec=0.05, now_fn=RTH)
+    job = liq.start(pos, [f"{p.account_id}|{p.instrument.key}" for p in pos])
+    job.done.wait(15)
+    got = {l["account"]: l["filled"] for l in job.view()["legs"]}
+    assert got == {"Main·SG-0001": 10, "B·MY-0002": 20}
+    assert len({l["oid"] for l in job.view()["legs"]}) == 2

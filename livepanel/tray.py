@@ -15,7 +15,8 @@ WM_APP_TRAY = 0x8000 + 1
 WM_CLOSE, WM_DESTROY, WM_COMMAND, WM_NULL = 0x0010, 0x0002, 0x0111, 0x0000
 WM_LBUTTONUP, WM_RBUTTONUP, WM_LBUTTONDBLCLK = 0x0202, 0x0205, 0x0203
 NIM_ADD, NIM_MODIFY, NIM_DELETE = 0, 1, 2
-NIF_MESSAGE, NIF_ICON, NIF_TIP = 1, 2, 4
+NIF_MESSAGE, NIF_ICON, NIF_TIP, NIF_INFO = 1, 2, 4, 0x10
+NIIF_INFO, NIIF_WARNING = 1, 2
 MF_STRING, MF_SEPARATOR, MF_CHECKED = 0x0, 0x800, 0x8
 TPM_RIGHTBUTTON, TPM_RETURNCMD, TPM_NONOTIFY = 0x2, 0x100, 0x80
 IMAGE_ICON, LR_LOADFROMFILE, LR_DEFAULTSIZE = 1, 0x10, 0x40
@@ -119,6 +120,16 @@ class Tray:
         nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
         nid.uCallbackMessage, nid.hIcon, nid.szTip = WM_APP_TRAY, self.hicon, self.t["tip"]
         self.added = bool(ctypes.windll.shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid)))
+
+    def notify(self, title: str, text: str, warn: bool = False) -> bool:
+        """A Windows notification from the tray icon (it shows up like any app's toast)."""
+        if not (self.hwnd and self.added):
+            return False
+        nid = self._nid()
+        nid.uFlags = NIF_INFO
+        nid.szInfoTitle, nid.szInfo = title[:63], text[:255]
+        nid.dwInfoFlags = NIIF_WARNING if warn else NIIF_INFO
+        return bool(ctypes.windll.shell32.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(nid)))
 
     def _menu(self) -> None:
         u = ctypes.windll.user32

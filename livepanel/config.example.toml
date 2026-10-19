@@ -31,6 +31,7 @@ lead_min = 30               # start refreshing this long before the 09:30 ET ope
 grace_min = 15              # keep refreshing this long after the close, then freeze on closing marks
 base_currency = "USD"
 data_dir = "~/.livepanel"   # equity history + exit logs live here, never in the repo
+check_updates = true        # ask GitHub twice a day whether a newer release exists (one small request, nothing about you)
 
 [fx]                        # units per 1 USD, for deposits made in another currency
 # MYR = 4.20
@@ -41,6 +42,8 @@ extra_holidays = []         # e.g. ["2028-01-17"] once the built-in table runs o
 [trading]
 enabled = false             # the exit buttons only exist when true
 dry_run = true              # true = real positions and quotes, simulated fills, nothing is sent
+# start_frac = 0.70         # first order: bid + 70% of the spread when selling, ask - 70% when buying back
+# step_sec = 10             # then one tick toward the bid (ask) every 10 s, never past it
 allow_extended_hours = false  # stocks only; options never trade outside 09:30–16:00 ET
 # exit_command = ["python", "my_exit_tool.py"]   # optional: a red "Exit" button that starts your own tool instead
 # exit_window_prefix = "My Exit"                   # if that tool's window is already open, bring it back instead
@@ -50,3 +53,10 @@ mode = "app"                # "app" or "tab" (a normal browser tab)
 width = 320                 # first-open size; after that it reopens where and how big you left it (Windows)
 height = 420
 tray = true                 # Windows: icon by the clock — open the window, start with Windows, quit
+
+[phone]                     # a read-only copy of the page for your phone (no exit, unlock or settings on it)
+enabled = false
+bind = "127.0.0.1"          # 127.0.0.1 with a tunnel (ngrok) on this computer, or this computer's Tailscale address
+port = 8791
+poll_sec = 60               # how often the phone page refreshes
+# the link: `livepanel --phone-link` (it carries a key; delete ~/.livepanel/view_key to cancel every link)

@@ -25,17 +25,21 @@ TIMEZONES = ("Asia/Kuala_Lumpur", "Asia/Singapore", "Asia/Hong_Kong", "Asia/Shan
 
 def form_from(cfg: Config) -> dict:
     """What the page edits, filled from the file plus defaults."""
-    logins = cfg.get("moomoo", "logins") or [{"label": "", "port": int(cfg.get("moomoo", "port"))}]
+    logins = cfg.get("moomoo", "logins") or [{"label": "", "port": int(cfg.get("moomoo", "port")),
+                                              "opend": cfg.get("moomoo", "opend") or ""}]
     return {
         "lang": cfg.get("panel", "lang"),
         "display_tz": cfg.get("panel", "display_tz"),
         "refresh_sec": int(cfg.get("panel", "refresh_sec")),
         "brokers": list(cfg.brokers),
         "moomoo": {"host": cfg.get("moomoo", "host"), "paper": bool(cfg.get("moomoo", "paper")),
-                   "logins": [{"label": str(x.get("label") or ""), "port": int(x.get("port", cfg.get("moomoo", "port")))}
-                              for x in logins]},
+                   "logins": [{"label": str(x.get("label") or ""), "port": int(x.get("port", cfg.get("moomoo", "port"))),
+                               "opend": str(x.get("opend") or "")} for x in logins]},
         "ibkr": {"host": cfg.get("ibkr", "host"), "port": int(cfg.get("ibkr", "port"))},
-        "trading": {"enabled": cfg.trading_enabled, "dry_run": cfg.dry_run},      # shown, not editable
+        # on/off and dry run are shown, not editable; the exit ladder (where the first order sits, how often it
+        # moves one tick) is editable: it never crosses the bid / ask either way
+        "trading": {"enabled": cfg.trading_enabled, "dry_run": cfg.dry_run,
+                    "start_pct": round(cfg.ladder[0] * 100), "step_sec": int(cfg.ladder[1])},
     }
 
 
@@ -68,7 +72,8 @@ def apply(raw: dict, form: dict) -> dict:
     m = out.setdefault("moomoo", {})
     m["host"] = str(mm.get("host") or "127.0.0.1").strip()
     m["paper"] = bool(mm.get("paper"))
-    logins = [{"label": str(x.get("label") or "").strip(), "port": _port(x.get("port"))} for x in mm.get("logins") or []]
+    logins = [{"label": str(x.get("label") or "").strip(), "port": _port(x.get("port")),
+               "opend": str(x.get("opend") or "").strip().strip('"')} for x in mm.get("logins") or []]
     # a login that wasn't in the file before joins with its whole balance: mark it, so the panel books that
     # balance as a deposit instead of this week's profit (see brokers.moomoo_logins). Existing ones keep theirs.
     old_logins = (raw.get("moomoo") or {}).get("logins")
@@ -86,13 +91,29 @@ def apply(raw: dict, form: dict) -> dict:
     if len(logins) == 1 and not logins[0]["label"]:
         m["port"] = logins[0]["port"]                     # one login: the plain form, account keys stay "SG-1234"
         m.pop("logins", None)
+        if logins[0]["opend"]:
+            m["opend"] = logins[0]["opend"]
+        else:
+            m.pop("opend", None)
     elif logins:
-        m["logins"] = [{k: x[k] for k in ("label", "port", "since") if k in x} for x in logins]
+        m["logins"] = [{k: x[k] for k in ("label", "port", "since", "opend") if x.get(k)} for x in logins]
 
     ib = form.get("ibkr") or {}
     i = out.setdefault("ibkr", {})
     i["host"] = str(ib.get("host") or "127.0.0.1").strip()
     i["port"] = _port(ib.get("port", i.get("port", 7496)))
+
+    ft = form.get("trading") or {}
+    if "start_pct" in ft or "step_sec" in ft:
+        pct = _int(ft.get("start_pct", 70), "first price")
+        if not 0 <= pct <= 100:
+            raise ValueError("first price must be 0–100% of the spread")
+        step = _int(ft.get("step_sec", 10), "step interval")
+        if not 3 <= step <= 60:
+            raise ValueError("step interval must be 3–60 seconds")
+        f0, s0 = Config(raw).ladder
+        if (pct, step) != (round(f0 * 100), int(s0)):         # untouched: leave the file as it was
+            out.setdefault("trading", {}).update({"start_frac": pct / 100, "step_sec": step})
 
     if "moomoo" in use:
         moomoo_logins(Config(out))                        # same checks the panel runs at start: labels, ports

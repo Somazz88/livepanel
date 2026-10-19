@@ -9,13 +9,15 @@ password; a trade password typed into 🔓 goes to OpenD as an MD5 and is not sa
 
 - Positions, today's P&L, this week / this month P&L (deposits stripped out), across several accounts, several
   moomoo logins and brokers — one row per symbol, every account's legs under it.
-- Each option leg says whether you are the **buyer** or the **seller**; a spread shows its dollar P&L (a % of
-  its net cost means nothing).
+- Each option leg says whether you are **long** or **short** (中文: 买方 / 卖方), its dollar P&L and days to expiry;
+  legs about to expire are flagged. A login that is offline keeps its last-seen positions on screen, greyed —
+  not shown is not closed.
 - Freezes on closing marks after the bell instead of re-pulling quotes that can't change.
-- Exit (off by default): tick a symbol or single legs, confirm a list of exactly what will be sent, and it works
-  limit orders only — sell to close from the bid + 70% of the spread, buy back to close from the ask − 70%,
-  one tick toward the far side every 10 s, never past it. Afterwards it re-reads the positions and says
-  **"All closed"** or what is still held.
+- Exit (off by default): press 🧹 **Exit**, pick legs on its own page — options and stock in separate sections, one
+  tick for a symbol across every login — with live bid / ask and the first price shown, confirm a list of exactly
+  what will be sent. Limit orders only: sell to close from the bid + 70% of the spread, buy to close from the
+  ask − 70%, one tick toward the far side every 10 s, never past it (both numbers are settings). Afterwards it
+  re-reads the positions and says **"All closed"** or what is still held.
 
 > **Status**
 > - moomoo: read side verified against a real OpenD, including two different logins on one computer at once.
@@ -62,6 +64,10 @@ The settings page (⚙) writes these for you. Tried with two real logins on one 
 5. Each account must have done moomoo's API questionnaire once
    ([moomoo.com/about/api-disclaimer](https://www.moomoo.com/about/api-disclaimer)); otherwise OpenD logs in and exits.
 6. Keep every OpenD window open (minimized is fine). The command-line OpenD has no *Unlock* button: use 🔓 in the panel.
+
+Give a login its OpenD's location (`opend = '…\OpenD.exe'`, or the box on the settings page) and the panel starts
+that OpenD when it isn't running — at start-up, and again within five minutes if it gets closed. It opens minimized;
+logging in is OpenD's own business (its saved login), so a login that needs an SMS code still needs you once.
 
 If one OpenD is closed, that login shows "OpenD not reachable" and the others keep working; week / month wait
 until it is back, because the total would be wrong without it. A login added later gets `since = "YYYY-MM-DD"`
@@ -113,6 +119,18 @@ The window is Chrome or Edge in app mode (no tabs, no address bar). Wide windows
 narrow ones keep symbol, size, value and today's P&L. Without Chrome / Edge it opens as a normal browser tab.
 
 From a source checkout instead: `python -m livepanel --window` in the repo folder.
+
+**Notices and messages:** when an exit job ends, the tray icon shows a Windows notification ("✅ All closed" or
+"⚠️ Still held: …"). Broker errors are shown in plain words ("this login isn't unlocked — press 🔓"); hover to see
+the original text.
+
+**Phone view (read-only):** `[phone] enabled = true` starts a second, read-only copy of the page — no exit, unlock,
+settings or restart on it, and every request needs the key in its link (`livepanel --phone-link` prints it; delete
+`~/.livepanel/view_key` to cancel all links). Reach it from your phone through Tailscale (bind to this computer's
+Tailscale address) or a tunnel such as ngrok (bind 127.0.0.1); a tunnel's company can see the numbers it carries.
+
+**Updates:** twice a day the panel asks GitHub whether a newer full release exists and shows a small link if so
+(`check_updates = false` under `[panel]` turns that off).
 
 Week / month numbers need history: the app records equity while the market is open and shows a period once
 it has a close from before that period.

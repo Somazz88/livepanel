@@ -30,7 +30,8 @@ def main() -> int:
             "--add-data", f"{ROOT / 'livepanel' / 'web'}{sep}livepanel/web",
             "--add-data", f"{ROOT / 'livepanel' / 'config.example.toml'}{sep}livepanel",
             "--hidden-import", "livepanel.brokers.moomoo", "--hidden-import", "livepanel.brokers.ibkr",
-            "--hidden-import", "livepanel.settings"]
+            "--hidden-import", "livepanel.settings", "--hidden-import", "livepanel.tray",
+            "--hidden-import", "livepanel.updates"]
     # whatever else is installed in the building Python stays out: pandas / moomoo only import these optionally
     for m in ("torch", "torchvision", "torchaudio", "transformers", "triton", "sklearn", "scipy", "matplotlib",
               "tkinter", "_tkinter", "IPython", "jupyter", "notebook", "sqlalchemy", "lxml", "PIL", "cv2", "numba",

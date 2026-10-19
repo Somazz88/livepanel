@@ -13,16 +13,18 @@ from ..models import AccountSnapshot, AssetClass, CashFlow, Fill, Instrument, Or
 from .base import Broker, BrokerError
 
 
+_SIM_IDS = itertools.count(1)          # one sequence for every simulator: each login gets its own, ids must not repeat
+
+
 class _SimOrders:
     def __init__(self, quote_fn):
         self.quote_fn = quote_fn
         self.orders: dict[str, dict] = {}
-        self._ids = itertools.count(1)
         self._lock = threading.Lock()
 
     def place(self, account_id, inst, side, qty, price, session="rth") -> str:
         with self._lock:
-            oid = f"sim-{next(self._ids)}"
+            oid = f"sim-{next(_SIM_IDS)}"
             self.orders[oid] = {"inst": inst, "side": side, "qty": qty, "price": price, "filled": 0.0,
                                 "status": "working", "account": account_id}
             return oid

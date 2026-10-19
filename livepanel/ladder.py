@@ -31,14 +31,15 @@ def _snap(p: float, tick: float, up: bool) -> float:
     return round(k * tick, _decimals(tick))
 
 
-def start_price(side: Side, bid: float, ask: float, tick: float) -> float:
+def start_price(side: Side, bid: float, ask: float, tick: float, frac: float = START_FRAC) -> float:
+    """`frac`: how far into the spread the first order sits, measured from the passive side ([trading] start_frac)."""
     if side == Side.SELL:
         if ask <= bid:
             return bid
-        return max(bid, _snap(bid + START_FRAC * (ask - bid), tick, up=False))
+        return max(bid, _snap(bid + frac * (ask - bid), tick, up=False))
     if ask <= bid:
         return ask
-    return min(ask, _snap(ask - START_FRAC * (ask - bid), tick, up=True))
+    return min(ask, _snap(ask - frac * (ask - bid), tick, up=True))
 
 
 def next_price(side: Side, cur: float, bid: float, ask: float, tick: float) -> float:

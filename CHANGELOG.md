@@ -1,6 +1,36 @@
 # Changelog
 
-## 0.4.0 — unreleased
+## 0.4.1 — 2026-10-19
+
+- The panel starts each login's OpenD when it isn't running (`opend = "…OpenD.exe"`), minimized, and again within
+  five minutes if it gets closed. Only an OpenD program is accepted there.
+- Windows notification when an exit job ends: all closed, or what is still held.
+- Broker errors in plain words (not unlocked, no permission, price not accepted, OpenD closed …).
+- "Update available" link when GitHub has a newer full release (`check_updates`).
+- Read-only phone view (`[phone]`, off by default): key in the link, nothing on it can act.
+- Readability pass (reviewed as a stock-only trader, an options trader, a US trader and a first-time user):
+  - A login that drops out keeps its last-seen positions on screen, greyed and marked *offline*, out of every total
+    and never selectable; the totals name the missing login. Before, its rows simply vanished — which reads as
+    "closed".
+  - *Open P&L* column in dollars on every row, the % beside it; each leg ends with its dollar P&L. A symbol held
+    as options and stock shows both parts (`options +1,000 · stock +760`).
+  - Option legs within 3 days of expiry are flagged on the leg and on the symbol row (visible when collapsed).
+  - A rehearsal's results say *simulated fill — nothing was sent*, not ✅ filled.
+  - English uses long / short and sell / buy to close; Chinese keeps 买方 / 卖方, short stock is 卖空.
+    *Close selected* / 平仓所选; the confirm warns that spread legs are separate orders.
+  - 🔒 until every login is unlocked; the sparkline no longer calls an earlier close "now".
+  - Fixed: a % was rounded twice (3.46 → 3.5 → "4%").
+- Exit works like the original exit window: the main view only shows; 🧹 *Exit* opens a page to pick legs — options
+  and stock in separate sections, a symbol ticked once across every login, live bid / ask, spread and first price
+  per leg, the total to be received / paid — then the confirm, then the job's progress on the same page.
+  All buttons one grey; ticked rows lit.
+- The ladder is a setting: `start_frac` (first price, % of the spread from the bid / ask, default 70%) and
+  `step_sec` (default 10 s), editable on the settings page.
+- Fixed: in a rehearsal with two logins, both simulators numbered orders `sim-1, sim-2 …`, so one leg could read
+  another leg's fills ("filled 20" on a 10-lot). Order states are now looked up by account and order id, and
+  simulated ids are unique.
+
+## 0.4.0 — 2026-10-19
 
 - Several moomoo logins in one panel (one OpenD each, `[[moomoo.logins]]`), grouped per symbol across logins;
   one exit sends each leg to the login that holds it. A login added later is booked as a deposit (`since`).

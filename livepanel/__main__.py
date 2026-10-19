@@ -48,6 +48,7 @@ def main(argv=None) -> int:
     ap.add_argument("--demo", action="store_true", help="fake positions, nothing to install or log into")
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--no-tray", action="store_true", help="no tray icon (Windows)")
+    ap.add_argument("--phone-link", action="store_true", help="print the read-only phone link ([phone] in the config)")
     ap.add_argument("--port", type=int)
     ap.add_argument("--restarted", action="store_true", help=argparse.SUPPRESS)   # set by the settings page's restart
     a = ap.parse_args(argv)
@@ -75,6 +76,11 @@ def main(argv=None) -> int:
             first_run = True
         path = path.resolve()
         cfg = config.load(path)
+    if a.phone_link:
+        from .server import view_key
+        print(f"http://{cfg.get('phone', 'bind')}:{cfg.get('phone', 'port')}/?k={view_key(cfg.data_dir)}")
+        print("" if cfg.get("phone", "enabled") else "[phone] enabled = false in the config: turn it on first")
+        return 0
     port = a.port or int(cfg.get("panel", "port"))
     url = f"http://127.0.0.1:{port}/"
     how = "none" if a.no_browser else ("window" if a.window else "tab")
@@ -89,6 +95,8 @@ def main(argv=None) -> int:
 
     _log_if_windowless(cfg)
     sessions.add_holidays(cfg.get("market", "extra_holidays"))
+    opends = OpenDKeeper(cfg)
+    opends.start_missing(wait_sec=60)                    # configured OpenDs that aren't running yet
     b = brokers.make(cfg)
     b.connect()
     for name, err in b.errors.items():
@@ -101,9 +109,16 @@ def main(argv=None) -> int:
     liq = None
     if cfg.trading_enabled:
         mode = "dry" if cfg.dry_run else ("paper" if _all_paper(cfg) else "real")
-        liq = Liquidator(b, cfg.data_dir / "exit_log", mode, bool(cfg.get("trading", "allow_extended_hours")))
+        frac, step = cfg.ladder
+        liq = Liquidator(b, cfg.data_dir / "exit_log", mode, bool(cfg.get("trading", "allow_extended_hours")),
+                         step_sec=step, start_frac=frac)
     restart_requested = threading.Event()
     srv_box: list = []
+    updates = None
+    if cfg.get("panel", "check_updates") and not a.demo:
+        from .updates import Watcher
+        updates = Watcher()
+        updates.start()
 
     def restart():
         restart_requested.set()
@@ -112,7 +127,8 @@ def main(argv=None) -> int:
     srv = None
     for attempt in range(40 if a.restarted else 1):      # after a restart the old process may hold the port a moment
         try:
-            srv = serve(panel, liq, cfg, port, cfg_path=path, restart=restart if path else None, first_run=first_run)
+            srv = serve(panel, liq, cfg, port, cfg_path=path, restart=restart if path else None, first_run=first_run,
+                        updates=updates)
             break
         except OSError as e:
             err = e
@@ -122,6 +138,16 @@ def main(argv=None) -> int:
         b.close()
         return 1
     srv_box.append(srv)
+    opends.watch()                                       # one that gets closed later is started again
+    if cfg.get("phone", "enabled"):
+        from .server import serve_view, view_key
+        host, vport = str(cfg.get("phone", "bind")), int(cfg.get("phone", "port"))
+        try:
+            vs = serve_view(panel, cfg, host, vport, view_key(cfg.data_dir))
+            threading.Thread(target=vs.serve_forever, daemon=True, name="phone-view").start()
+            print(f"phone view (read-only) on http://{host}:{vport}/  — the link with its key: livepanel --phone-link")
+        except OSError as e:
+            print(f"phone view: can't listen on {host}:{vport} ({e})", file=sys.stderr)
     print(f"Live Panel on {url}  (trading: {'off' if not liq else liq.mode})")
     if sys.platform == "win32" and str(cfg.get("window", "mode") or "app") == "app":
         from .window import remember_loop
@@ -131,6 +157,9 @@ def main(argv=None) -> int:
         _show(url, cfg, how)
     tray = _start_tray(cfg, url, path, srv, liq) if (sys.platform == "win32" and cfg.get("window", "tray")
                                                       and not a.no_tray) else None
+    if tray and liq:
+        from .liquidator import job_summary
+        liq.on_done = lambda job: tray.notify(*job_summary(job, str(cfg.get("panel", "lang"))))
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
@@ -186,6 +215,110 @@ def _start_tray(cfg, url, path, srv, liq):
     if not t.start():
         print("tray icon could not be added", file=sys.stderr)
     return t
+
+
+class OpenDKeeper:
+    """Starts the OpenD of each login that has `opend = "...OpenD.exe"` when its port is closed: at start-up, and
+    again if it is closed later (at most once per 5 minutes per login). It opens minimized and doesn't take focus;
+    logging in is OpenD's own business (its saved login, or its window)."""
+
+    RETRY_SEC = 300
+
+    def __init__(self, cfg, popen=None, port_open=None, now=time.monotonic):
+        from .settings import _port_open
+        self.logins = [lg for lg in brokers.moomoo_logins(cfg) if lg.get("opend")] if "moomoo" in cfg.brokers else []
+        self.popen = popen or self._popen
+        self.port_open = port_open or _port_open
+        self.now = now
+        self.last: dict[str, float] = {}
+
+    @staticmethod
+    def _popen(exe: str):
+        kw = {}
+        if sys.platform == "win32":
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = 7                             # SW_SHOWMINNOACTIVE: minimized, focus stays where it was
+            kw = {"startupinfo": si, "creationflags": subprocess.CREATE_NEW_CONSOLE}
+        proc = subprocess.Popen([exe], cwd=os.path.dirname(exe) or None, **kw)
+        if sys.platform == "win32":
+            # Windows 11's console ignores the "start minimized" flag (10-19: the window opened full size in the
+            # middle of the main screen), so minimize its window ourselves the moment it appears
+            threading.Thread(target=_minimize_windows_of, args=(proc.pid, exe), daemon=True).start()
+
+    def start_missing(self, wait_sec: float = 0) -> list[str]:
+        started = []
+        for lg in self.logins:
+            key = f"{lg['host']}:{lg['port']}"
+            if self.port_open(lg["host"], lg["port"]):
+                continue
+            if self.now() - self.last.get(key, -1e9) < self.RETRY_SEC:
+                continue
+            self.last[key] = self.now()
+            if not os.path.isfile(lg["opend"]):
+                print(f"[{lg['label'] or 'moomoo'}] OpenD not found at {lg['opend']}", file=sys.stderr)
+                continue
+            try:
+                self.popen(lg["opend"])
+                started.append(lg["label"] or "moomoo")
+                print(f"[{lg['label'] or 'moomoo'}] started OpenD on port {lg['port']}")
+            except OSError as e:
+                print(f"[{lg['label'] or 'moomoo'}] could not start OpenD: {e}", file=sys.stderr)
+        if started and wait_sec:
+            end = time.monotonic() + wait_sec
+            while time.monotonic() < end and not all(self.port_open(l["host"], l["port"]) for l in self.logins):
+                time.sleep(1)
+            time.sleep(8)                                  # its port opens before the login has finished
+        return started
+
+    def watch(self, every: float = 60) -> None:
+        if not self.logins:
+            return
+
+        def loop():
+            while True:
+                time.sleep(every)
+                try:
+                    self.start_missing()
+                except Exception as e:
+                    print(f"[opend] {e}", file=sys.stderr)
+        threading.Thread(target=loop, daemon=True, name="opend-keeper").start()
+
+
+def _minimize_windows_of(pid: int, exe: str = "", timeout: float = 20.0) -> int:
+    """Minimize (without activating) the started OpenD's windows as soon as they show up. OpenD starts a second
+    OpenD.exe and the console window belongs to that child (10-19), so match the launched pid, or the window title,
+    which is the program's path."""
+    import ctypes
+    import ctypes.wintypes as wt
+    u = ctypes.windll.user32
+    done, end, seen_at = 0, time.monotonic() + timeout, None
+    while time.monotonic() < end:
+        hits = []
+
+        def cb(h, _):
+            p = wt.DWORD()
+            u.GetWindowThreadProcessId(h, ctypes.byref(p))
+            if not u.IsWindowVisible(h) or u.IsIconic(h):
+                return True
+            n = u.GetWindowTextLengthW(h)
+            title = ""
+            if n:
+                b = ctypes.create_unicode_buffer(n + 1)
+                u.GetWindowTextW(h, b, n + 1)
+                title = b.value.lower()
+            if p.value == pid or (exe and exe.lower() in title):
+                hits.append(h)
+            return True
+        u.EnumWindows(ctypes.WINFUNCTYPE(ctypes.c_bool, wt.HWND, wt.LPARAM)(cb), 0)
+        for h in hits:
+            u.ShowWindow(h, 7)                             # SW_SHOWMINNOACTIVE
+            done += 1
+            seen_at = seen_at or time.monotonic()
+        if seen_at and time.monotonic() - seen_at > 3:     # keep watching briefly in case it re-shows itself
+            break
+        time.sleep(0.02)
+    return done
 
 
 def _all_paper(cfg) -> bool:

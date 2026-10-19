@@ -162,3 +162,23 @@ def test_closed_check_all_closed_and_dry(tmp_path):
     d = DryRun(FakeBroker.demo())
     jd = run(Liquidator(d, tmp_path, "dry", step_sec=0.05, now_fn=RTH), d, [key(d.inner, "AAPL")])
     assert jd.closed_check == "dry"                                            # a rehearsal can't change positions
+
+
+def test_the_end_of_job_notice_answers_is_it_gone(tmp_path):
+    from livepanel.liquidator import job_summary
+    b = FakeBroker.demo()
+    liq = Liquidator(b, tmp_path, "test", step_sec=0.05, now_fn=RTH)
+    seen = []
+    liq.on_done = seen.append
+    job = run(liq, b, [key(b, "NVDA 12/18 150C")])
+    for _ in range(50):
+        if seen:
+            break
+        time.sleep(0.05)
+    assert seen == [job]                                                   # called once, with the job
+    title, text, warn = job_summary(job, "zh")
+    assert title == "⚠️ 清完还剩" and "NVDA 12/18 150C ×10" in text and warn   # the fake still holds it
+    job.closed_check = "all_closed"
+    assert job_summary(job, "en")[0] == "✅ All closed" and not job_summary(job, "en")[2]
+    job.closed_check = "dry"
+    assert job_summary(job, "zh")[0] == "演练结束"

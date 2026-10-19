@@ -10,12 +10,14 @@ DEFAULT = {
     "moomoo": {"host": "127.0.0.1", "port": 11111, "paper": False, "include_futures": True},
     "ibkr": {"host": "127.0.0.1", "port": 7496, "client_id": 17, "market_data_type": 1},
     "panel": {"port": 8790, "lang": "en", "display_tz": "America/New_York", "refresh_sec": 20,
-              "lead_min": 30, "grace_min": 15, "base_currency": "USD", "data_dir": "~/.livepanel"},
+              "lead_min": 30, "grace_min": 15, "base_currency": "USD", "data_dir": "~/.livepanel",
+              "check_updates": True},
     "fx": {},
     "market": {"extra_holidays": []},
     "trading": {"enabled": False, "dry_run": True, "allow_extended_hours": False,
-                "exit_command": None, "exit_window_prefix": None},
+                "exit_command": None, "exit_window_prefix": None, "start_frac": 0.70, "step_sec": 10},
     "window": {"mode": "app", "width": 320, "height": 420, "tray": True},
+    "phone": {"enabled": False, "bind": "127.0.0.1", "port": 8791, "poll_sec": 60},
 }
 HOME = Path.home() / ".livepanel"
 EXAMPLE = Path(__file__).parent / "config.example.toml"
@@ -62,6 +64,21 @@ class Config:
     @property
     def dry_run(self) -> bool:
         return bool(self.get("trading", "dry_run"))
+
+    @property
+    def ladder(self) -> tuple[float, float]:
+        """(start_frac, step_sec) for exits. A value out of range falls back to the default instead of stopping the
+        panel from starting; the settings page refuses such values before they are written."""
+        d = DEFAULT["trading"]
+        try:
+            f = float(self.get("trading", "start_frac"))
+        except (TypeError, ValueError):
+            f = d["start_frac"]
+        try:
+            s = float(self.get("trading", "step_sec"))
+        except (TypeError, ValueError):
+            s = d["step_sec"]
+        return (f if 0.0 <= f <= 1.0 else d["start_frac"]), (s if 3 <= s <= 120 else d["step_sec"])
 
 
 def load(path: str | Path | None) -> Config:

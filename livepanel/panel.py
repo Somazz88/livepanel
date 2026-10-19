@@ -127,7 +127,10 @@ class Panel:
         except Exception:
             und = {}
         # before the open, brokers still report the day-before's close as prev_close -> the % would be wrong
-        groups, foot = group_positions(positions, und, day, show_und=us_session(now) != "pre", base=base)
+        off = self.b.offline_positions() if hasattr(self.b, "offline_positions") else {}
+        groups, foot = group_positions(positions, und, day, show_und=us_session(now) != "pre", base=base,
+                                       offline={n: ps for n, (ps, _) in off.items()})
+        offline = {n: t.astimezone(self.tz).strftime("%m-%d %H:%M") for n, (_, t) in off.items()}
         # 10-02 side-by-side check: a buy at 22:45 was missing from the list 3 minutes later (5-min cadence).
         # A trade changes the positions, so refetch as soon as they change.
         sig = tuple(sorted((p.account_id, p.instrument.key, p.qty) for p in positions))
@@ -153,6 +156,8 @@ class Panel:
             "today": round(today, 2), "today_missing": missing_today, "other_ccy": other_ccy,
             "periods": periods, "accounts": [s.__dict__ for s in snaps], "positions": rows,
             "errors": {k: scrub(v) for k, v in self.b.errors.items()},
+            "offline": offline,                         # login -> when its greyed positions were last seen
+            "tz": str(self.tz),
             "calendar_stale": calendar_stale(day), "message": "",
             "acct_today": account_today(positions, base), "groups": groups, "foot": foot,
             "fills": fills, "fills_today": fills_today, "fills_known": self._fills is not None,
