@@ -118,6 +118,14 @@ def test_adding_a_login_books_its_balance_as_a_deposit_not_profit(tmp_path):
     acct2.equity = 6_100.0                                                  # her account then moves by itself
     st = p.tick(now=_dt(2026, 10, 19, 11, 0, tzinfo=NY), force=True)
     assert st["periods"]["week"]["pnl"] == 100.0                          # only the move counts
+    # the login is taken out of the config: its balance leaves the totals, and so must its join deposit
+    p.cfg = Config({**raw, "moomoo": {"logins": [{"label": "Main", "port": 11111}]}})
+    p.b = Composite([main])
+    p.b.connect()
+    st = p.tick(now=_dt(2026, 10, 20, 10, 0, tzinfo=NY), force=True)
+    assert st["equity"] == 50_000.0 and st["periods"]["week"]["net_deposits"] == 0.0
+    assert st["periods"]["week"]["pnl"] == 0.0                            # not -6,000
+    assert "Acct2" not in json.loads((tmp_path / "joins.json").read_text(encoding="utf-8"))
 
 
 def test_settings_page_marks_only_new_logins():

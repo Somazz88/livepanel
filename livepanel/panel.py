@@ -189,10 +189,18 @@ class Panel:
             return None                                    # broker can't report deposits: already labelled as such
         try:
             from .brokers import moomoo_logins
-            new = [lg["label"] for lg in moomoo_logins(self.cfg) if lg.get("since")] if "moomoo" in self.cfg.brokers else []
+            logins = moomoo_logins(self.cfg) if "moomoo" in self.cfg.brokers else []
         except ValueError:
-            new = []
+            logins = None
+        new = [lg["label"] for lg in logins or [] if lg.get("since")]
         changed = False
+        if logins is not None:
+            # a login taken out of the config leaves the totals; its join must leave with it, or its balance keeps
+            # being subtracted as a deposit (10-20: removing a login turned this week's -3,979 into -10,134).
+            # Dropping the record also means adding it back later books a fresh join.
+            for label in [k for k in self._joins if k not in {lg["label"] for lg in logins}]:
+                del self._joins[label]
+                changed = True
         for label in new:
             if label in self._joins:
                 continue

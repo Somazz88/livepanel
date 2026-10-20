@@ -211,7 +211,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // ── broker / engine errors in plain words (the original stays in the tooltip) ──
 const HUMAN = {
- zh: [[/not reachable at ([\d.]+:\d+)/i, () => "没连上 —— 它现在的持仓看不到，看不到≠已平。打开它的 OpenD（不是 moomoo app）登录，再按 ↻"],
+ zh: [[/orders are live: brokers, logins/i, () => "真实下单开着：券商、登录和端口不能在设置页改（防止点错换了下单的账户）—— 叫我改设定文件，或先把 dry_run 改回 true"],
+      [/not reachable at ([\d.]+:\d+)/i, () => "没连上 —— 它现在的持仓看不到，看不到≠已平。打开它的 OpenD（不是 moomoo app）登录，再按 ↻"],
       [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "交易密码不对"],
       [/unlock|解锁/i, () => "这个号还没解锁 —— 按 🔒 输入它的交易密码"],
       [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "这个号没有这个市场的交易权限"],
@@ -220,7 +221,8 @@ const HUMAN = {
       [/price|tick|价格|价位/i, () => "价格不合规（最小价位或涨跌幅）"],
       [/disconnect|connection (lost|reset|refused)|ReadFail|断开|连接/i, () => "跟 OpenD 断线了 —— 看 OpenD 窗口还在不在"],
       [/position query failed/i, () => "读持仓失败 —— OpenD 可能断线或还没登录好"]],
- en: [[/not reachable at ([\d.]+:\d+)/i, () => "not connected — its positions now can't be seen, and not shown ≠ closed. Open its OpenD (not the moomoo app), log in, then press ↻"],
+ en: [[/orders are live: brokers, logins/i, () => "Orders are live: brokers, logins and ports can't be changed here (so a click can't switch which account trades) — edit the config file, or set dry_run = true first"],
+      [/not reachable at ([\d.]+:\d+)/i, () => "not connected — its positions now can't be seen, and not shown ≠ closed. Open its OpenD (not the moomoo app), log in, then press ↻"],
       [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "Wrong trade password"],
       [/unlock|解锁/i, () => "This login isn't unlocked — press 🔒 and enter its trade password"],
       [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "This login can't trade this market"],
@@ -662,7 +664,7 @@ function drawSettings(){
     $("sRes").innerHTML = ok ? `<div class="ok">${SL.lnkDone} ${esc(j.path)}</div>` : `<div class="bad">${esc(j.error||"?")}</div>`; };
   $("sSave").onclick = async () => { collect(); $("sRes").innerHTML = `<div class="mut">${SL.saving}</div>`;
     const [ok, j] = await api("/api/config", {form:FORM});
-    if (!ok){ $("sRes").innerHTML = `<div class="bad">${esc(j.error||"?")}</div>`; return; }
+    if (!ok){ $("sRes").innerHTML = `<div class="bad">${humanHtml(j.error||"?")}</div>`; return; }
     $("sRes").innerHTML = `<div class="ok">${SL.saved}</div><div class="mut">${SL.restarting}</div>`;
     const [ok2, j2] = await api("/api/restart", {});
     if (!ok2) $("sRes").innerHTML += `<div class="bad">${esc(j2.error||"?")}</div>`; };
