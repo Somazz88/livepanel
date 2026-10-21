@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 — 2026-10-21
+
+- First run is easier: the settings page starts in the computer's language (中文 / English) and time zone, and lists
+  the four steps before a moomoo connection works (install OpenD, the API questionnaire, log in, test), with links.
+- The settings page can turn the exit buttons on **as a rehearsal** (real quotes, nothing is sent) and off again.
+  It always writes `dry_run = true`; live orders still need `dry_run = false` typed into the file, and while orders
+  are live the switch is hidden and ignored.
+- Taking a login out of the config also drops its join deposit (it kept being subtracted from week / month).
+- Test connection and save errors are shown in plain words, including "orders are live: can't change logins here".
+
 ## 0.4.1 — 2026-10-19
 
 - The panel starts each login's OpenD when it isn't running (`opend = "…OpenD.exe"`), minimized, and again within

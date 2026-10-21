@@ -1,7 +1,8 @@
 """The settings page's back end: read the editable part of config.toml, check it, write it back.
 
-Only connection and display settings are editable here. [trading] (whether the exit buttons can send orders)
-stays file-only on purpose, so a click in the page can never turn live orders on. Every save keeps the previous
+Connection and display settings are editable here. Of [trading], the page can only turn the exit buttons on as a
+rehearsal (dry_run = true: nothing is sent) or off again; dry_run = false stays file-only on purpose, so a click in
+the page can never turn live orders on, and while orders are live the page can't change [trading] at all. Every save keeps the previous
 file as config.toml.bak-<time>; comments in the file are not kept.
 """
 from __future__ import annotations
@@ -36,7 +37,7 @@ def form_from(cfg: Config) -> dict:
                    "logins": [{"label": str(x.get("label") or ""), "port": int(x.get("port", cfg.get("moomoo", "port"))),
                                "opend": str(x.get("opend") or "")} for x in logins]},
         "ibkr": {"host": cfg.get("ibkr", "host"), "port": int(cfg.get("ibkr", "port"))},
-        # on/off and dry run are shown, not editable; the exit ladder (where the first order sits, how often it
+        # dry run is shown, not editable (on/off only as a rehearsal, see apply); the exit ladder (where the first order sits, how often it
         # moves one tick) is editable: it never crosses the bid / ask either way
         "trading": {"enabled": cfg.trading_enabled, "dry_run": cfg.dry_run,
                     "start_pct": round(cfg.ladder[0] * 100), "step_sec": int(cfg.ladder[1])},
@@ -114,11 +115,18 @@ def apply(raw: dict, form: dict) -> dict:
         f0, s0 = Config(raw).ladder
         if (pct, step) != (round(f0 * 100), int(s0)):         # untouched: leave the file as it was
             out.setdefault("trading", {}).update({"start_frac": pct / 100, "step_sec": step})
+    tr = raw.get("trading") or {}
+    live = bool(tr.get("enabled")) and not tr.get("dry_run", True)
+    if "rehearsal" in ft and not live and bool(ft["rehearsal"]) != Config(raw).trading_enabled:
+        # the page's only on/off: exit buttons as a rehearsal (real quotes, simulated fills), or no exit buttons.
+        # It always writes dry_run = true, never false; going live is a hand edit of the file.
+        t = out.setdefault("trading", {})
+        t["enabled"] = bool(ft["rehearsal"])
+        t["dry_run"] = True
 
     if "moomoo" in use:
         moomoo_logins(Config(out))                        # same checks the panel runs at start: labels, ports
-    tr = raw.get("trading") or {}
-    if tr.get("enabled") and not tr.get("dry_run", True):
+    if live:
         # orders are live: switching paper → real, a port or the logins here would change which account the next
         # exit trades. Those changes go through the file (or turn dry_run on first).
         def where(r):                                     # the effective values, defaults filled in
@@ -203,7 +211,7 @@ def save(path: Path, raw: dict, now: datetime | None = None) -> Path | None:
     path = Path(path)
     stamp = (now or datetime.now()).strftime("%Y%m%d-%H%M%S")
     text = (f"# Written by the Live Panel settings page {stamp}. The previous file (with any comments) is kept\n"
-            f"# next to this one as {path.name}.bak-{stamp}. [trading] can only be changed here, by hand.\n\n"
+            f"# next to this one as {path.name}.bak-{stamp}. dry_run = false can only be set here, by hand.\n\n"
             + dumps(raw))
     backup = None
     if path.exists():

@@ -21,9 +21,10 @@ password; a trade password typed into 🔓 goes to OpenD as an MD5 and is not sa
 
 > **Status**
 > - moomoo: read side verified against a real OpenD, including two different logins on one computer at once.
-> - Exit engine: its moomoo order calls match a tool that has placed live orders since September 2026, but this
->   code itself has been tested against a simulated broker and rehearsed on live quotes only. The unlock step
->   has not yet been tried against a real OpenD.
+> - Exit engine: tested against a simulated broker and rehearsed on live quotes; first live use on 2026-10-19 by the author,
+>   on three moomoo accounts across two logins (long options and stock, sold to close) — every leg filled and the
+>   re-read showed them closed. That is one evening, not a track record: rehearse first. Unlocking with 🔓 has worked on a real
+>   command-line OpenD.
 > - IBKR: written against `ib_async` and tested against a fake gateway. **Not yet run against a real TWS / IB Gateway.**
 > - Crypto exchanges: not supported yet (the data model has room for it).
 
@@ -86,8 +87,9 @@ The TWS API has no deposit history, so IBKR week/month P&L is labelled *excludes
 
 ## Install and run
 
-**Windows, no Python:** run `LivePanel.exe` (build it with `python scripts/build_exe.py`; it lands in `dist/`).
-The first time, it creates `%USERPROFILE%\.livepanel\config.toml` and opens the settings page: pick your broker,
+**Windows, no Python:** download `LivePanel.exe` from the
+[latest release](https://github.com/Somazz88/livepanel/releases/latest) and double-click it (or build it yourself
+with `python scripts/build_exe.py`; it lands in `dist/`). The first time, it creates `%USERPROFILE%\.livepanel\config.toml` and opens the settings page: pick your broker,
 press *Test connection*, then *Save & restart*. Windows may warn about an unknown publisher (the file isn't
 code-signed): *More info → Run anyway*.
 
@@ -101,7 +103,8 @@ livepanel --window         # first run: creates ~/.livepanel/config.toml and ope
 
 **Settings page** (the ⚙ button): language, time zone, refresh interval, brokers, moomoo logins and ports, IBKR port,
 with a *Test connection* button. Saving keeps the previous file as `config.toml.bak-<time>` and restarts the panel.
-Whether the exit buttons may send orders (`[trading]`) is **not** on the page: change it in the file by hand.
+The page can turn the exit buttons on as a **rehearsal** (real quotes, nothing is sent) or off. Real orders are
+**not** on the page: set `dry_run = false` under `[trading]` in the file by hand.
 
 **Tray icon (Windows):** the panel keeps running when its window is closed or minimized. Its icon by the clock
 opens the window (left-click), and its menu has *Start with Windows* and *Quit*. Quit is refused while an exit

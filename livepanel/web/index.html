@@ -100,6 +100,7 @@ label.ck{display:inline-flex;align-items:center;margin-right:10px;cursor:pointer
 #unl input[type=password],#set input[type=text],#set input[type=number],#set select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
 #set input.lbl{width:100px}#set input.port{width:84px}#set input.od{flex:1 1 100%;min-width:0;font-size:12px}
 button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+#setBody a{color:var(--acc)}
 .res div{font-size:12px;margin:3px 0}.res .ok{color:var(--up)}.res .bad{color:var(--dn)}
 @media (max-width:420px){#set{padding:8px 10px}.fs{padding:8px}.row>label:first-child:not(.ck){min-width:54px}#set input.lbl{width:84px}#set input.port{width:70px}#gear,#unlk{padding:1px 7px;font-size:11px;border-radius:6px}}
 /* small app window (livepanel --window, ~460px) */
@@ -582,9 +583,11 @@ const S = {
    test:"Test connection",save:"Save & restart",testing:"Testing…",saving:"Saving…",restarting:"Restarting — the page reloads by itself",
    saved:"Saved",trade:"Exit orders",tradeOff:"off",tradeDry:"dry run (no orders are sent)",tradeLive:"LIVE ORDERS",
    ladStart:"First price",ladStartNote:"% of the spread: selling from the bid up, buying back from the ask down",ladStep:"Step",ladStepNote:"one tick toward the bid (ask)",
-   tradeNote:"A rehearsal sends no orders. To send real orders, open the config file below in a text editor, set dry_run = false and restart (ask whoever set this up if unsure) — a click here can never turn orders on. While orders are live, brokers, logins and ports can't be changed here either.",file:"File",
+   tradeNote:"A rehearsal sends no orders. Real orders can't be turned on from this page: open the config file below in a text editor, set dry_run = false and restart (ask whoever set this up if unsure). While orders are live, brokers, logins, ports and the switch above can't be changed here either.",file:"File",
    code:{ok:"connected",closed:"nothing is listening on that port — start OpenD / TWS, or check the port",error:"error",timeout:"no answer in time"},
    accounts:"accounts",welcome:"First run: pick your broker, press Test connection, then Save & restart.",
+   guide:["Install moomoo <b>OpenD</b>, the bridge between moomoo and this panel (the moomoo app alone isn't enough): <a href=\"https://www.moomoo.com/download/OpenAPI\" target=\"_blank\">moomoo.com/download/OpenAPI</a>","Once per account, do moomoo's API questionnaire: <a href=\"https://www.moomoo.com/about/api-disclaimer\" target=\"_blank\">moomoo.com/about/api-disclaimer</a> (without it OpenD logs in, then quits)","Log in to OpenD and keep it open (minimized is fine), then press Test connection below","Several moomoo accounts: one OpenD each, each on its own port (<a href=\"https://github.com/Somazz88/livepanel#several-moomoo-logins-in-one-panel\" target=\"_blank\">how</a>). Just looking? Tick Demo data."],
+   reh:"Exit buttons, as a rehearsal (real quotes, nothing is sent)",
    lnk:"Desktop icon",lnkDone:"Icon placed:"},
  zh:{title:"设置",lang:"语言",brokers:"券商",demo:"演示数据",mm:"moomoo",
    mmNote:"每个 moomoo 号开一个 OpenD，各用不同端口（OpenD.xml 里的 api_port）。只有一个号时名称可以留空。",
@@ -593,12 +596,14 @@ const S = {
    test:"测试连线",save:"保存并重启",testing:"测试中…",saving:"保存中…",restarting:"重启中…页面会自己刷新",
    saved:"已保存",trade:"清仓下单",tradeOff:"关",tradeDry:"演练（不会真的下单）",tradeLive:"真实下单",
    ladStart:"首挂",ladStartNote:"% 价差：卖出从买一价往上算，买回从卖一价往下算",ladStep:"每隔",ladStepNote:"往买一（卖一）挪一格",
-   tradeNote:"演练时不会真的下单。要改成真实下单，只能用记事本打开下面的设定文件，把 dry_run 改成 false 再重启（不确定就先问帮你装的人）—— 在这里点不会打开下单。真实下单开着的时候，券商、登录和端口也不能在这里改。",file:"设定文件",
+   tradeNote:"演练时不会真的下单。真实下单不能在这里打开：只能用记事本打开下面的设定文件，把 dry_run 改成 false 再重启（不确定就先问帮你装的人）。真实下单开着的时候，券商、登录、端口和上面的开关也不能在这里改。",file:"设定文件",
    code:{ok:"连上了",closed:"这个端口没有程序在听 —— 先打开 OpenD / TWS，或检查端口",error:"出错",timeout:"等太久没回应"},
    accounts:"账户",welcome:"第一次使用：选好券商，按「测试连线」，没问题再按「保存并重启」。",
+   guide:["装 moomoo <b>OpenD</b>，它是 moomoo 和这个面板之间的桥（只有 moomoo app 不够）：<a href=\"https://www.moomoo.com/download/OpenAPI\" target=\"_blank\">moomoo.com/download/OpenAPI</a>","每个号做一次 moomoo 的 API 问卷：<a href=\"https://www.moomoo.com/about/api-disclaimer?lang=zh-cn\" target=\"_blank\">moomoo.com/about/api-disclaimer</a>（不做的话，OpenD 登录后会自己退出）","登录 OpenD，一直开着（最小化可以），然后按下面的「测试连线」","有好几个 moomoo 号：每个号开一个 OpenD，各用一个端口（<a href=\"https://github.com/Somazz88/livepanel#several-moomoo-logins-in-one-panel\" target=\"_blank\">做法</a>）。只想先看看？勾「演示数据」。"],
+   reh:"显示清仓按钮 · 演练（报价是真的，不会送单）",
    lnk:"桌面放图标",lnkDone:"已放到："}
 };
-const SL = S[CFG.lang] || S.en;
+let SL = S[CFG.lang] || S.en;
 let FORM = null, TZS = [], CFGPATH = "";
 async function api(path, body){
   const r = await fetch(path, body===undefined ? {headers:{"X-Token":CFG.token},cache:"no-store"}
@@ -609,7 +614,12 @@ async function openSettings(){
   $("set").hidden = false; $("setBody").innerHTML = `<div class="mut">…</div>`;
   const [ok, j] = await api("/api/config");
   if (!ok){ $("setBody").innerHTML = `<div class="errs">${esc(j.error||"?")}</div>`; return; }
-  FORM = j.form; TZS = j.timezones||[]; CFGPATH = j.path||""; drawSettings();
+  FORM = j.form; TZS = j.timezones||[]; CFGPATH = j.path||"";
+  if (CFG.first_run){                                   // nothing saved yet: start from this computer's language and time zone
+    if (/^zh/i.test(navigator.language||"")) FORM.lang = "zh";
+    try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; if (TZS.includes(z)) FORM.display_tz = z; } catch(e){}
+    SL = S[FORM.lang] || S.en; $("setTitle").textContent = SL.title; }
+  drawSettings();
 }
 function collect(){
   const f = FORM; if (!f) return;
@@ -622,13 +632,14 @@ function collect(){
   if ($("sPaper")) f.moomoo.paper = $("sPaper").checked;
   if ($("sIb")) f.ibkr.port = +$("sIb").value;
   if ($("sPct")) f.trading = {...(f.trading||{}), start_pct: +$("sPct").value, step_sec: +$("sStep").value};
+  if ($("sReh")) f.trading = {...(f.trading||{}), rehearsal: $("sReh").checked};
 }
 function drawSettings(){
   const f = FORM, m = f.moomoo, has = b => f.brokers.includes(b);
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(v)===String(cur)?" selected":""}>${esc(label??v)}</option>`;
   const tzs = TZS.includes(f.display_tz) ? TZS : [f.display_tz, ...TZS];
   const refs = [10,20,30,60,120].includes(+f.refresh_sec) ? [10,20,30,60,120] : [+f.refresh_sec,10,20,30,60,120];
-  let h = CFG.first_run ? `<p class="mut">${SL.welcome}</p>` : "";
+  let h = CFG.first_run ? `<p class="mut">${SL.welcome}</p><ol class="mut" style="padding-left:18px;margin:4px 0 10px;font-size:12px;line-height:1.55">${SL.guide.map(x=>`<li>${x}</li>`).join("")}</ol>` : "";
   h += `<div class="fs"><div class="row"><label>${SL.lang}</label><select id="sLang">${opt("zh",f.lang,"中文")}${opt("en",f.lang,"English")}</select></div>`+
        `<div class="row"><label>${SL.tz}</label><select id="sTz">${tzs.map(z=>opt(z,f.display_tz)).join("")}</select></div>`+
        `<div class="row"><label>${SL.every}</label><select id="sRef">${refs.map(v=>opt(v,f.refresh_sec,v+" "+SL.sec)).join("")}</select></div></div>`;
@@ -645,6 +656,7 @@ function drawSettings(){
   const t = f.trading||{};
   const steps = [3,5,10,15,20,30,60].includes(+t.step_sec) ? [3,5,10,15,20,30,60] : [+t.step_sec,3,5,10,15,20,30,60];
   h += `<div class="fs"><div class="row"><label>${SL.trade}</label><b class="${t.enabled&&!t.dry_run?"dn":""}">${!t.enabled?SL.tradeOff:t.dry_run?SL.tradeDry:SL.tradeLive}</b></div>`+
+       (t.enabled&&!t.dry_run ? "" : `<div class="row"><label class="ck"><input type="checkbox" id="sReh"${(t.rehearsal??t.enabled)?" checked":""}>${SL.reh}</label></div>`)+
        (t.enabled ? `<div class="row"><label>${SL.ladStart}</label><input id="sPct" type="number" min="0" max="100" style="width:64px" value="${esc(t.start_pct??70)}"><small>${SL.ladStartNote}</small></div>`+
          `<div class="row"><label>${SL.ladStep}</label><select id="sStep">${steps.map(v=>opt(v,t.step_sec??10,v+" "+SL.sec)).join("")}</select><small>${SL.ladStepNote}</small></div>` : "")+
        `<small>${SL.tradeNote}</small><br><small>${SL.file}: ${esc(CFGPATH)}</small></div>`;
@@ -652,6 +664,7 @@ function drawSettings(){
   $("setBody").innerHTML = h;
   document.querySelectorAll("#setBody [data-b]").forEach(cb => cb.onchange = () => { collect(); const b = cb.dataset.b;
     FORM.brokers = cb.checked ? [...new Set([...FORM.brokers, b])] : FORM.brokers.filter(x=>x!==b); drawSettings(); });
+  $("sLang").onchange = () => { collect(); SL = S[FORM.lang] || S.en; $("setTitle").textContent = SL.title; drawSettings(); };
   if ($("sAdd")) $("sAdd").onclick = () => { collect(); const ps = FORM.moomoo.logins.map(l=>+l.port||0);
     FORM.moomoo.logins.push({label:"", port:Math.max(11110, ...ps)+1, opend:""}); drawSettings(); };
   document.querySelectorAll("#setBody [data-del]").forEach(b => b.onclick = () => { collect(); FORM.moomoo.logins.splice(+b.dataset.del,1); drawSettings(); });
@@ -659,7 +672,7 @@ function drawSettings(){
     const [ok, j] = await api("/api/config/test", {form:FORM});
     $("sRes").innerHTML = ok ? j.rows.map(r=>`<div class="${r.code==="ok"?"ok":"bad"}">${r.code==="ok"?"✅":"❌"} ${esc(r.name)} — ${SL.code[r.code]||esc(r.code)}`+
       `${r.detail?` <small>${esc(r.detail)}</small>`:""}${(r.accounts||[]).length?` · ${SL.accounts}: ${r.accounts.map(esc).join(", ")}`:""}</div>`).join("")
-      : `<div class="bad">${esc(j.error||"?")}</div>`; };
+      : `<div class="bad">${humanHtml(j.error||"?")}</div>`; };
   $("sLnk").onclick = async () => { const [ok, j] = await api("/api/shortcut", {});
     $("sRes").innerHTML = ok ? `<div class="ok">${SL.lnkDone} ${esc(j.path)}</div>` : `<div class="bad">${esc(j.error||"?")}</div>`; };
   $("sSave").onclick = async () => { collect(); $("sRes").innerHTML = `<div class="mut">${SL.saving}</div>`;

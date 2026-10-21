@@ -239,6 +239,21 @@ def test_with_live_orders_the_page_cannot_change_which_account_trades():
         settings.apply(both, {**fb, "ibkr": {**fb["ibkr"], "port": 7497}})        # used: live 7496 -> paper 7497
 
 
+def test_the_page_turns_on_a_rehearsal_never_live_orders():
+    off = {**RAW, "trading": {"enabled": False, "dry_run": False}}            # even a file that says dry_run = false
+    f = settings.form_from(Config(json.loads(json.dumps(off))))
+    on = settings.apply(off, {**f, "trading": {**f["trading"], "rehearsal": True, "dry_run": False}})
+    assert on["trading"]["enabled"] is True and on["trading"]["dry_run"] is True   # the page's dry_run is ignored
+    back = settings.apply(on, {**f, "trading": {**f["trading"], "rehearsal": False}})
+    assert back["trading"]["enabled"] is False and back["trading"]["dry_run"] is True
+    untouched = settings.apply(off, f)                                            # no switch sent: file stays
+    assert untouched["trading"] == off["trading"]
+    live = {**RAW, "trading": {"enabled": True, "dry_run": False}}
+    fl = settings.form_from(Config(json.loads(json.dumps(live))))
+    for v in (False, True):                                                       # live: the switch does nothing
+        assert settings.apply(live, {**fl, "trading": {**fl["trading"], "rehearsal": v}})["trading"] == live["trading"]
+
+
 def test_a_date_in_the_file_is_refused_not_crashed(tmp_path):
     raw = {**RAW, "market": {"extra_holidays": [__import__("datetime").date(2028, 1, 17)]}}
     with pytest.raises(ValueError, match="can't edit"):
