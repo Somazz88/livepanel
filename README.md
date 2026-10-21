@@ -4,6 +4,12 @@ A local, read-mostly positions panel for **moomoo / Futu** and **Interactive Bro
 one-click exit. Runs on your own machine and talks only to your broker's local gateway. It never sees your login
 password; a trade password typed into 🔓 goes to OpenD as an MD5 and is not saved.
 
+**Quick start (Windows) · 快速开始**
+1. Install and log in to moomoo [OpenD](https://www.moomoo.com/download/OpenAPI) · 安装并登录 moomoo OpenD
+2. Download **[LivePanel.exe](https://github.com/Somazz88/livepanel/releases/latest/download/LivePanel.exe)** and
+   double-click it · 下载 LivePanel.exe，双击打开
+3. The settings page walks you through the rest (中文 / English) · 剩下的设置页会一步步带你
+
 <p><img src="docs/panel.png" width="300" alt="Live Panel, small window, demo data">
 <img src="docs/settings.png" width="300" alt="Settings page"></p>
 
