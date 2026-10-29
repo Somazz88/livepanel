@@ -163,6 +163,8 @@ def test_unlock_goes_to_the_named_login_only():
     assert ("unlock",) in b.calls and ("unlock",) not in a.calls
     with pytest.raises(Exception, match="wrong trade password"):
         comp.unlock("fake·Main", "nope")
+    b.unlock_in_opend = True                                                # GUI OpenD: the dialog shows its button instead of a box
+    assert [l["in_opend"] for l in comp.logins()] == [False, True]
     from livepanel.brokers.fake import DryRun
     d = DryRun(_login("C", "C·MY-0003", 1, 1.0))
     assert d.needs_unlock and d.unlock("123456") is None                  # a rehearsal can test unlocking too

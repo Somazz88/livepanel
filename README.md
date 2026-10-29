@@ -42,7 +42,8 @@ password; a trade password typed into 🔓 goes to OpenD as an MD5 and is not sa
 3. `pip install moomoo-api`
 4. In `config.toml`: `use = ["moomoo"]`. Default address `127.0.0.1:11111`.
 5. Quotes: US options L1 is free if your account has assets or US positions; otherwise buy OPRA.
-6. Live orders need the login unlocked: the GUI OpenD's *Unlock* button (top right), or 🔓 in the panel.
+6. Live orders need the login unlocked. The GUI OpenD only takes its own *Unlock* button (top right): moomoo refuses
+   unlocks from other programs there. 🔓 in the panel is for the command-line OpenD.
 
 Accounts are discovered automatically. A universal account's futures sub-account is added to its equity.
 
@@ -156,7 +157,7 @@ it has a close from before that period.
   marked "filled" is not proof the position is gone.
 - moomoo live orders need each login unlocked with its trade password: 🔓 in the panel sends it to that login's
   OpenD only, as an MD5, and saves nothing (moomoo's library keeps that MD5 in memory to re-unlock after a
-  reconnect; the GUI OpenD's own Unlock button works too). In rehearsal mode no order is sent, but the unlock is real.
+  reconnect). The GUI OpenD refuses this and only unlocks with its own button (top right); the panel sees which OpenD it is and shows no 🔓 for it. In rehearsal mode no order is sent, but the unlock is real.
 - While orders are live (`enabled = true`, `dry_run = false`), the settings page refuses to change brokers, logins,
   ports or *paper*: those decide which account the next exit trades, so they go through the file.
 - The server listens on 127.0.0.1 and trusts every program running on this computer (the token is in the page it

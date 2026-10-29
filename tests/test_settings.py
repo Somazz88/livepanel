@@ -276,6 +276,33 @@ def test_unlock_gives_moomoo_only_the_md5():
     assert seen == [{"password_md5": hashlib.md5(b"hunter22").hexdigest()}] * 2     # the password itself never passed
 
 
+
+def test_gui_opend_refusal_says_use_its_own_button():
+    import types
+    from livepanel.brokers.base import BrokerError
+    from livepanel.brokers.moomoo import MoomooBroker
+
+    class TC:
+        def unlock_trade(self, **kw):
+            return -1, ("Please use the Unlock button in the top-right corner of the OpenD page to unlock trading. "
+                        "The GUI version of OpenD has disabled the unlock interface.")
+    b = MoomooBroker(label="X")
+    b.m, b._ctx = types.SimpleNamespace(RET_OK=0), [TC()]
+    with pytest.raises(BrokerError, match="GUI OpenD"):
+        b.unlock("hunter22")
+    assert b.unlock_in_opend
+    assert MoomooBroker(label="Y").unlock_in_opend is False                       # per login, not for every OpenD
+
+
+def test_gui_opend_is_found_by_the_program_on_the_port():
+    from livepanel.brokers.moomoo import gui_opend, listener_pid
+    out = ("  TCP    127.0.0.1:11111        0.0.0.0:0              侦听            40872\n"     # translated state word
+           "  TCP    127.0.0.1:11111        127.0.0.1:52000        ESTABLISHED     40872\n"
+           "  TCP    127.0.0.1:52000        127.0.0.1:11111        ESTABLISHED     24464\n"
+           "  TCP    0.0.0.0:111110         0.0.0.0:0              LISTENING       9\n")
+    assert listener_pid(out, 11111) == 40872 and listener_pid(out, 11112) is None
+    assert gui_opend("10.0.0.5", 11111) is False                                  # another computer's OpenD: can't tell
+
 def test_update_check_only_announces_a_newer_full_release():
     from livepanel.updates import newer
     rel = lambda tag, pre=False: (lambda: {"tag_name": tag, "html_url": f"https://github.com/x/y/releases/tag/{tag}", "prerelease": pre})

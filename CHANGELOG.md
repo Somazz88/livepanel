@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- A login on the GUI OpenD can't be unlocked from the panel (moomoo refuses it there). The panel now sees which
+  program serves the port: for the GUI OpenD it shows no 🔒 and no password box, only "use the Unlock button at the
+  top right of the OpenD window". If it can't tell, the first refusal does the same.
+
 ## 0.4.2 — 2026-10-21
 
 - First run is easier: the settings page starts in the computer's language (中文 / English) and time zone, and lists

@@ -57,6 +57,7 @@ class Broker(ABC):
 
     # ── trading ──────────────────────────────────────────────────────────
     needs_unlock = False                 # True: live orders need the trade password once per session (moomoo)
+    unlock_in_opend = False              # True: this login can only be unlocked in its own OpenD window (GUI OpenD)
 
     def unlock(self, password: str) -> None:
         """Unlock live trading with the trade password. Brokers that don't use one raise."""

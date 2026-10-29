@@ -86,6 +86,45 @@ def _f(x):
         return None
 
 
+
+GUI_OPEND = {"moomoo_opend.exe", "futu_opend.exe"}       # the command-line OpenD is OpenD.exe
+
+
+def listener_pid(netstat: str, port: int) -> int | None:
+    """PID listening on this port in `netstat -ano` output. "LISTENING" is translated on some Windows, so a
+    listener is found by its empty remote address instead."""
+    return next((int(f[4]) for f in (ln.split() for ln in netstat.splitlines())
+                 if len(f) == 5 and f[1].endswith(f":{port}") and f[2] in ("0.0.0.0:0", "[::]:0") and f[4].isdigit()), None)
+
+
+def gui_opend(host: str, port: int) -> bool:
+    """True when the program listening on this local port is the GUI OpenD (Windows only). It refuses unlocks from
+    programs, so the panel shows its Unlock button instead of a password box. Unsure → False (the box stays, and
+    the first refusal flips it)."""
+    import sys
+    if sys.platform != "win32" or host not in ("127.0.0.1", "localhost"):
+        return False
+    import ctypes
+    import subprocess
+    try:
+        out = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True, timeout=5,
+                             creationflags=subprocess.CREATE_NO_WINDOW).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    pid = listener_pid(out, port)
+    if not pid:
+        return False
+    k32 = ctypes.windll.kernel32
+    h = k32.OpenProcess(0x1000, False, pid)                  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return False
+    try:
+        buf, n = ctypes.create_unicode_buffer(1024), ctypes.c_ulong(1024)
+        ok = k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(n))
+    finally:
+        k32.CloseHandle(h)
+    return bool(ok) and Path(buf.value).name.lower() in GUI_OPEND
+
 class MoomooBroker(Broker):
     name = "moomoo"
     # docs: place 15 / 30 s, modify 20 / 30 s per account — keep 2 spare of each
@@ -119,6 +158,8 @@ class MoomooBroker(Broker):
                 pass
         except OSError:
             raise BrokerError(f"OpenD not reachable at {self.host}:{self.port} — start that OpenD and log in") from None
+        if gui_opend(self.host, self.port):
+            self.unlock_in_opend = True           # moomoo won't let a program unlock the GUI OpenD: no password box for it
         with self._lock:
             self.q = m.OpenQuoteContext(host=self.host, port=self.port)
             ret, st = self.q.get_global_state()
@@ -398,6 +439,9 @@ class MoomooBroker(Broker):
             with self._lock:
                 ret, d = tc.unlock_trade(password_md5=md5)
             if ret != m.RET_OK:
+                if "GUI version of OpenD" in str(d) or "图形" in str(d):
+                    self.unlock_in_opend = True           # moomoo refuses API unlocks on the GUI OpenD: only its own button works
+                    raise BrokerError("GUI OpenD: unlock it with the Unlock button at the top right of its window")
                 raise BrokerError(scrub(d))
 
     def _tc(self, account_id: str):

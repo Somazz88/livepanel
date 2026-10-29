@@ -54,7 +54,8 @@ class Composite(Broker):
         for b in self.brokers:
             inner = getattr(b, "inner", b)
             out.append({"name": b.name, "label": getattr(inner, "label", None) or inner.name,
-                        "unlock": bool(getattr(inner, "needs_unlock", False)), "connected": b.name not in self.errors})
+                        "unlock": bool(getattr(inner, "needs_unlock", False)), "connected": b.name not in self.errors,
+                        "in_opend": bool(getattr(inner, "unlock_in_opend", False))})
         return out
 
     def unlock(self, name: str, password: str) -> None:

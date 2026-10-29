@@ -215,7 +215,8 @@ const HUMAN = {
  zh: [[/orders are live: brokers, logins/i, () => "真实下单开着：券商、登录和端口不能在设置页改（防止点错换了下单的账户）—— 叫我改设定文件，或先把 dry_run 改回 true"],
       [/not reachable at ([\d.]+:\d+)/i, () => "没连上 —— 它现在的持仓看不到，看不到≠已平。打开它的 OpenD（不是 moomoo app）登录，再按 ↻"],
       [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "交易密码不对"],
-      [/unlock|解锁/i, () => "这个号还没解锁 —— 按 🔒 输入它的交易密码"],
+      [/GUI OpenD|GUI version of OpenD/i, () => "这个号开的是图形版 OpenD，moomoo 不让从面板解锁 —— 到 OpenD 窗口右上角按「解锁」"],
+      [/unlock|解锁/i, () => "这个号还没解锁 —— 按 🔒 输入它的交易密码（图形版 OpenD 要在它窗口右上角按「解锁」）"],
       [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "这个号没有这个市场的交易权限"],
       [/insufficient|not enough|exceed|不足|超过/i, () => "数量或资金不够（可能已经有挂单占着）"],
       [/trading hours|market (is )?closed|not (in )?trading|非交易时段|休市|不在交易时间/i, () => "现在不是它的交易时段"],
@@ -225,7 +226,8 @@ const HUMAN = {
  en: [[/orders are live: brokers, logins/i, () => "Orders are live: brokers, logins and ports can't be changed here (so a click can't switch which account trades) — edit the config file, or set dry_run = true first"],
       [/not reachable at ([\d.]+:\d+)/i, () => "not connected — its positions now can't be seen, and not shown ≠ closed. Open its OpenD (not the moomoo app), log in, then press ↻"],
       [/wrong (trade )?password|password (is )?(incorrect|wrong)|密码错误|密码不正确/i, () => "Wrong trade password"],
-      [/unlock|解锁/i, () => "This login isn't unlocked — press 🔒 and enter its trade password"],
+      [/GUI OpenD|GUI version of OpenD/i, () => "This login runs the GUI OpenD, which moomoo won't let the panel unlock — press Unlock at the top right of the OpenD window"],
+      [/unlock|解锁/i, () => "This login isn't unlocked — press 🔒 and enter its trade password (GUI OpenD: its own Unlock button, top right)"],
       [/no (trading )?permission|permission denied|没有.*权限|无.*权限/i, () => "This login can't trade this market"],
       [/insufficient|not enough|exceed|不足|超过/i, () => "Not enough quantity or cash (a working order may hold it)"],
       [/trading hours|market (is )?closed|not (in )?trading|非交易时段|休市|不在交易时间/i, () => "Outside this market's trading hours"],
@@ -299,8 +301,9 @@ function render(s){
   drawSpark(s.spark||[], s);
   drawGroups(s);
   drawDeals(s);
-  const uk = $("unlk"), need = (s.logins||[]).filter(l=>l.unlock);
-  if (!uk.hidden && need.length){ const all = need.every(l=>(s.unlocked||{})[l.name]); uk.textContent = all ? "🔓" : "🔒"; }
+  const uk = $("unlk"), need = (s.logins||[]).filter(l=>l.unlock && !l.in_opend);   // GUI OpenD: unlocked in its own window
+  uk.hidden = !(CFG.trading && need.length);
+  if (need.length){ const all = need.every(l=>(s.unlocked||{})[l.name]); uk.textContent = all ? "🔓" : "🔒"; }
   renderJobs(s.jobs||[]); drawX();
   if (!$("ov").hidden) drawOv();
 }
@@ -688,10 +691,12 @@ if (CFG.settings){ const g = $("gear"); g.hidden = false; g.title = SL.title; g.
   if (CFG.first_run || new URLSearchParams(location.search).has("settings")) openSettings(); }   // ?settings: open it (screenshots)
 // ── unlock trading (only when [trading] is on): one trade password per moomoo login, sent once, never kept ──
 const U = {
- en:{title:"Unlock trading",note:"Live orders on moomoo need each login's trade password first. It goes only to that login's OpenD on this computer and is not saved. The GUI OpenD's own Unlock button works too.",
-   dryWarn:"Rehearsal mode sends no orders, but this unlock is real: the login's OpenD stays unlocked until it restarts.",pw:"Trade password",go:"Unlock",done:"unlocked",none:"No login here needs unlocking (paper accounts don't).",bad:"failed",off:"OpenD not connected"},
- zh:{title:"解锁交易",note:"moomoo 真实下单前，每个号都要先用它自己的交易密码解锁。密码只交给这台电脑上那个号的 OpenD，不存档。图形版 OpenD 右上角的「解锁」按钮也可以用。",
-   dryWarn:"演练模式不会下单，但这里的解锁是真的：这个号的 OpenD 会保持解锁，直到它重开。",pw:"交易密码",go:"解锁",done:"已解锁",none:"这里没有需要解锁的号（模拟账户不用解锁）。",bad:"失败",off:"OpenD 没连上"}
+ en:{title:"Unlock trading",note:"Live orders on moomoo need each login's trade password first. It goes only to that login's OpenD on this computer and is not saved.  A login on the GUI OpenD can't be unlocked from here: use the Unlock button at the top right of its window.",
+   dryWarn:"Rehearsal mode sends no orders, but this unlock is real: the login's OpenD stays unlocked until it restarts.",pw:"Trade password",go:"Unlock",done:"unlocked",none:"No login here needs unlocking (paper accounts don't).",bad:"failed",off:"OpenD not connected",
+   inOpend:"GUI OpenD: unlock it with the Unlock button at the top right of its window. The panel can't see whether that's done."},
+ zh:{title:"解锁交易",note:"moomoo 真实下单前，每个号都要先用它自己的交易密码解锁。密码只交给这台电脑上那个号的 OpenD，不存档。用图形版 OpenD 的号不能在这里解锁：要在 OpenD 窗口右上角按「解锁」。",
+   dryWarn:"演练模式不会下单，但这里的解锁是真的：这个号的 OpenD 会保持解锁，直到它重开。",pw:"交易密码",go:"解锁",done:"已解锁",none:"这里没有需要解锁的号（模拟账户不用解锁）。",bad:"失败",off:"OpenD 没连上",
+   inOpend:"图形版 OpenD：到它窗口右上角按「解锁」输交易密码。面板看不到它解了没有。"}
 };
 const UL = U[CFG.lang] || U.en;
 function drawUnlock(){
@@ -701,24 +706,27 @@ function drawUnlock(){
     const t = (s.unlocked||{})[l.name];
     return `<div class="fs"><div class="row"><b>${esc(l.label)}</b>${t ? ` <span class="up">✅ ${UL.done} ${esc(t)}</span>` : ""}`+
       `${l.connected ? "" : ` <span class="dn">${UL.off}</span>`}</div>`+
+      (l.in_opend ? `<p class="mut" style="font-size:12px">${UL.inOpend}</p></div>` :
       `<div class="row"><input type="password" id="pw${i}" autocomplete="off" placeholder="${UL.pw}" maxlength="64">`+
-      `<button data-u="${i}" class="pri">${UL.go}</button></div><div class="res" id="ur${i}"></div></div>`; }).join("");
+      `<button data-u="${i}" class="pri">${UL.go}</button></div><div class="res" id="ur${i}"></div></div>`); }).join("");
   rows.forEach((l, i) => {
     const btn = document.querySelector(`#unlBody [data-u="${i}"]`), inp = $("pw" + i);
+    if (!btn) return;                                             // GUI OpenD row: no password box
     btn.onclick = async () => {
       const pw = inp.value; inp.value = "";                       // cleared before it is even sent
       if (!pw) return;
       btn.disabled = true;
       const [ok, j] = await api("/api/unlock", {login: l.name, password: pw});
       btn.disabled = false;
-      $("ur" + i).innerHTML = ok ? `<div class="ok">✅ ${UL.done}</div>` : `<div class="bad">${UL.bad}: ${esc(j.error||"?")}</div>`;
+      if (!ok && /GUI (version of )?OpenD/i.test(j.error||"")){ l.in_opend = true; return drawUnlock(); }   // swap the box for the instruction
+      $("ur" + i).innerHTML = ok ? `<div class="ok">✅ ${UL.done}</div>` : `<div class="bad">${UL.bad}: ${humanHtml(j.error||"?")}</div>`;
     };
     inp.onkeydown = e => { if (e.key === "Enter") btn.click(); };
   });
 }
 $("unlTitle").textContent = UL.title;
 $("unlX").onclick = () => { $("unl").hidden = true; };
-if (CFG.trading){ const u = $("unlk"); u.hidden = false; u.title = UL.title; u.onclick = () => { $("unl").hidden = false; drawUnlock(); }; }
+if (CFG.trading){ const u = $("unlk"); u.title = UL.title; u.onclick = () => { $("unl").hidden = false; drawUnlock(); }; }
 if (CFG.view_only) $("refresh").hidden = true;                  // phone view: read-only, refreshes by itself
 poll(); setInterval(poll, CFG.poll_ms || 3000);
 </script>
