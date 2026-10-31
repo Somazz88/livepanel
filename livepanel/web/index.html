@@ -92,6 +92,16 @@ input[type=checkbox]{margin:0 6px 0 0;vertical-align:-1px}
 .xr b{color:var(--mut);font-size:12px;margin-right:4px}.xr .q{font-size:12px;color:var(--mut);margin-left:22px}.xr .q b{color:var(--fg)}
 .xsum{margin:10px 2px 0;font-weight:600;font-variant-numeric:tabular-nums}
 #xp .bar button{background:#2f3843;color:#fff;border-color:#2f3843}#xp .bar button:disabled{background:var(--card);color:var(--mut);border-color:var(--line)}
+#xp .bar{position:sticky;bottom:-14px;background:var(--bg);margin:8px -16px 0;padding:8px 16px 10px;z-index:1}
+/* confirm and error boxes drawn in the page: the browser's own dialogs get cut off in a small window */
+#cf{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:8px}
+#cf .cfb{background:var(--card);border:1px solid var(--line);border-radius:10px;width:100%;max-width:520px;max-height:100%;display:flex;flex-direction:column}
+#cfBody{overflow-y:auto;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.45}
+#cf .cfbtn{display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--line);flex-shrink:0}
+#toast{position:fixed;left:8px;right:8px;bottom:8px;z-index:50;background:var(--card);border:1px solid var(--dn);color:var(--fg);border-radius:10px;
+  padding:10px 34px 10px 12px;font-size:13px;overflow-wrap:anywhere;max-height:45vh;overflow-y:auto;cursor:pointer}
+#toast::after{content:"✕";position:absolute;top:8px;right:12px;color:var(--mut)}
+@media (max-width:420px){#xp .bar{bottom:-8px;margin:8px -10px 0;padding:6px 10px 8px}#cfBody{font-size:12px;padding:10px 12px}#cf .cfbtn{padding:8px 12px}}
 @media (max-width:420px){#xp{padding:8px 10px}.xr{font-size:11.5px;padding:4px 8px 4px 18px}.xr .q{font-size:10.5px;margin-left:18px}.xg{padding:5px 8px}}
 .fs{margin:10px 0;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .fs h4{margin:0 0 6px;font-size:13px}.sub2{margin:6px 0 0;padding-top:6px;border-top:1px dashed var(--line)}
@@ -153,6 +163,9 @@ button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
   <small id="xpNote"></small>
   <section id="xpJobs"></section>
 </div>
+<div id="cf" hidden><div class="cfb"><div id="cfBody"></div>
+  <div class="cfbtn"><button id="cfNo"></button><button id="cfYes"></button></div></div></div>
+<div id="toast" hidden></div>
 <div id="set" hidden>
   <div class="hd"><b id="setTitle"></b><button id="setX">✕</button></div>
   <div id="setBody"></div>
@@ -170,7 +183,7 @@ const T = {
    legWarn:"⚠ Each leg is its own order: one leg of a spread can fill before the other.",offlineConfirm:n=>`⚠ ${n} is offline — not in this exit`,
    simFilled:"🧪 simulated fill",simPlaced:n=>`simulated ${n} — nothing was sent to the broker`,simJob:"rehearsal · nothing sent",todayN:n=>`today ${n}`,buy:"Buy",sell:"Sell",
    shortTag:"short",longTag:"long",soldAt:"sold at",close:{SELL:"sell to close",BUY:"buy to close"},
-   exitCmd:"Exit",exitCmdOld:"Old exit tool · LIVE",stop:"Stop & cancel",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",dryShort:"Rehearsal",update:v=>`v${v} available`,stillLive:"orders already placed are still live at the broker — check there",modes:{dry:"rehearsal",real:"LIVE",paper:"paper",test:"test"},placed:n=>`placed ${n}`,
+   exitCmd:"Exit",exitCmdOld:"Old exit tool · LIVE",stop:"Stop & cancel",cfNo:"Cancel",cfYes:"Exit",dry:"DRY RUN — no orders are sent",real:"LIVE ORDERS",dryShort:"Rehearsal",update:v=>`v${v} available`,stillLive:"orders already placed are still live at the broker — check there",modes:{dry:"rehearsal",real:"LIVE",paper:"paper",test:"test"},placed:n=>`placed ${n}`,
    confirm:(n,m,list,p,s)=>`Exit these ${n}?\n\n${list}\n\nMode: ${m}\nLimit orders only: sell to close starts at bid + ${p}% of the bid/ask spread, buy to close at ask − ${p}%; one tick toward the bid (ask) every ${s} s, never past it.`,
    allClosed:"✅ All closed — positions re-read after the job",someLeft:"⚠️ Still held after the job:",checkUnknown:"Couldn't re-read positions — check the broker",
    dryNote:"Rehearsal: real positions don't change",
@@ -193,7 +206,7 @@ const T = {
    legWarn:"⚠ 每条腿是分开挂的单：价差可能一条腿先成交、另一条还没成交。",offlineConfirm:n=>`⚠ ${n} 没连上，不在这次平仓里`,
    simFilled:"🧪 模拟成交",simPlaced:n=>`模拟挂 ${n} 条 —— 没送去券商`,simJob:"演练 · 没送单",todayN:n=>`今天 ${n} 笔`,buy:"买",sell:"卖",
    shortTag:"卖方",longTag:"买方",soldAt:"卖出价",close:{SELL:"卖出平仓",BUY:"买回平仓"},
-   exitCmd:"清仓",exitCmdOld:"旧工具清仓 · 真单",stop:"停止并撤单",dry:"演练模式 —— 不会真的下单",real:"真实下单",dryShort:"演练 · 不下单",update:v=>`有新版 ${v}`,stillLive:"已经挂出的单还在券商那边 —— 去券商确认",modes:{dry:"演练",real:"真单",paper:"模拟盘",test:"测试"},placed:n=>`已挂 ${n} 条`,
+   exitCmd:"清仓",exitCmdOld:"旧工具清仓 · 真单",stop:"停止并撤单",cfNo:"取消",cfYes:"确认清仓",dry:"演练模式 —— 不会真的下单",real:"真实下单",dryShort:"演练 · 不下单",update:v=>`有新版 ${v}`,stillLive:"已经挂出的单还在券商那边 —— 去券商确认",modes:{dry:"演练",real:"真单",paper:"模拟盘",test:"测试"},placed:n=>`已挂 ${n} 条`,
    confirm:(n,m,list,p,s)=>`清掉以下 ${n} 条？\n\n${list}\n\n模式：${m}\n只挂限价单：卖出平仓从买一价 + 价差的 ${p}% 开始、买回平仓从卖一价 − ${p}% 开始，每 ${s} 秒往买一（卖一）挪一格，永不越过。`,
    allClosed:"✅ 全部平掉 —— 清完已重新读持仓确认",someLeft:"⚠️ 清完还剩：",checkUnknown:"清完读不到持仓 —— 去券商确认",
    dryNote:"演练：真实持仓不会变",
@@ -460,9 +473,27 @@ function renderJobs(jobs){
 }
 async function post(path, body){
   const r = await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-Token":CFG.token},body:JSON.stringify(body||{})});
-  const j = await r.json().catch(()=>({})); if(!r.ok) alert(j.error||r.status); poll(); return j;
+  const j = await r.json().catch(()=>({})); if(!r.ok) toast(j.error||r.status); poll(); return j;
 }
-function exitKeys(keys){
+let toastT;
+function toast(msg){                                            // an error shown in the page, readable at any window size
+  const t = $("toast"); t.innerHTML = humanHtml(msg); t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 20000);
+}
+$("toast").onclick = () => { $("toast").hidden = true; };
+function ask(text, yes, real){                                  // resolves true only on a click of the confirm button
+  return new Promise(done => {
+    const cf = $("cf"), y = $("cfYes"), n = $("cfNo");
+    $("cfBody").textContent = text; y.textContent = yes; n.textContent = L.cfNo;
+    y.className = real ? "danger" : "pri"; cf.hidden = false; $("cfBody").scrollTop = 0;
+    const end = v => { cf.hidden = true; document.removeEventListener("keydown", esc); done(v); };
+    const esc = e => { if (e.key === "Escape") end(false); };
+    y.onclick = () => end(true); n.onclick = () => end(false);
+    cf.onclick = e => { if (e.target === cf) end(false); };
+    document.addEventListener("keydown", esc); n.focus();
+  });
+}
+async function exitKeys(keys){
   if(!keys.length) return false;
   const legs = (last&&last.groups||[]).flatMap(g=>g.legs.map(l=>({...l, tk:g.tk}))).filter(l=>keys.includes(l.key));
   const list = legs.map(l=>`${l.acct}  ${l.tk} ${l.what==="stock"?L.stock:l.what}  ${(L.close||{})[l.side]||l.side} ×${fmt(l.closable,0)}`).join("\n");
@@ -471,7 +502,8 @@ function exitKeys(keys){
   const warn = [offN.length ? L.offlineConfirm(offN.join("/")) : "",
                 legs.some(l=>l.what!=="stock" && l.qty>0 && both.has(l.tk)) ? L.legWarn : ""].filter(Boolean).join("\n");
   const pct = Math.round((CFG.start_frac ?? 0.7) * 100), step = CFG.step_sec ?? 10;
-  if(!confirm(L.confirm(keys.length, CFG.dry_run?L.dry:L.real, list, pct, step) + (warn ? "\n\n" + warn : ""))) return false;
+  if(!await ask(L.confirm(keys.length, CFG.dry_run?L.dry:L.real, list, pct, step) + (warn ? "\n\n" + warn : ""),
+                L.cfYes + (CFG.dry_run ? "" : ` · ${L.real}`), !CFG.dry_run)) return false;
   post("/api/exit",{keys});
   return true;
 }
@@ -565,7 +597,7 @@ if (CFG.trading){
   $("xpRef").onclick = xLoad;
   $("xpAll").onclick = () => { const f = xLegs().filter(xCan), on = !(f.length && f.every(l=>xsel.has(l.key)));
     f.forEach(l=>on?xsel.add(l.key):xsel.delete(l.key)); drawX(); };
-  $("xpGo").onclick = () => { if (exitKeys([...xsel])) { xsel.clear(); setTimeout(xLoad, 1500); } drawX(); };
+  $("xpGo").onclick = async () => { if (await exitKeys([...xsel])) { xsel.clear(); setTimeout(xLoad, 1500); } drawX(); };
   $("xpStop").onclick = () => post("/api/stop", {});
   if (new URLSearchParams(location.search).has("exit")) $("xOpen").click();   // ?exit: open it (screenshots)
 }

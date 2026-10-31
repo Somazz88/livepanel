@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The exit confirmation and error messages are drawn in the page. The browser's own dialogs were cut off in the
+  small window (no OK button without maximizing); now the leg list scrolls inside the box and the buttons stay visible.
+  The exit page's buttons stay at the bottom while the list scrolls.
 - A login on the GUI OpenD can't be unlocked from the panel (moomoo refuses it there). The panel now sees which
   program serves the port: for the GUI OpenD it shows no 🔒 and no password box, only "use the Unlock button at the
   top right of the OpenD window". If it can't tell, the first refusal does the same.
